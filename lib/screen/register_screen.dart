@@ -1,5 +1,7 @@
+// screens/register_screen.dart (Updated)
 import 'package:flutter/material.dart';
 import '../database/mongodb_service.dart';
+import '../service/user_service.dart';
 import '../models/user_model.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -22,20 +24,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
-    _connectToMongoDB();
+    _connectToDatabase();
   }
 
-  // Kết nối tới MongoDB khi khởi tạo
-  Future<void> _connectToMongoDB() async {
+  // Kết nối tới database khi khởi tạo
+  Future<void> _connectToDatabase() async {
     try {
-      print('Bắt đầu kết nối MongoDB...');
-      await MongoDBService.connect();
+      print('🔌 Bắt đầu kết nối database...');
+      await DatabaseConnection.connect();
       setState(() {
         _isConnected = true;
       });
-      print('Kết nối thành công!');
+      print('✅ Kết nối thành công!');
     } catch (e) {
-      print('Chi tiết lỗi kết nối: $e');
+      print('❌ Chi tiết lỗi kết nối: $e');
       setState(() {
         _isConnected = false;
       });
@@ -70,7 +72,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // Đăng ký user
+  // Đăng ký user (sử dụng UserService)
   Future<void> _registerUser() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -87,7 +89,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       User newUser = User(
-        idUser: 0, // Sẽ được tự động tăng trong service
+        idUser: 0, // Sẽ được tự động tăng trong UserService
         fullName: _fullNameController.text.trim(),
         birthDate: _birthDateController.text,
         gender: _selectedGender,
@@ -96,7 +98,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text,
       );
 
-      bool success = await MongoDBService.registerUser(newUser);
+      bool success = await UserService.registerUser(newUser);
       
       if (success) {
         _showSuccessDialog();
@@ -131,8 +133,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Thành công!'),
-          content: Text('Đã đăng ký tài khoản thành công!'),
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Thành công!'),
+            ],
+          ),
+          content: Text('Đã đăng ký tài khoản thành công!\nBạn có thể đăng nhập ngay bây giờ.'),
           actions: [
             TextButton(
               onPressed: () {
@@ -152,7 +160,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Lỗi!'),
+          title: Row(
+            children: [
+              Icon(Icons.error, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Lỗi!'),
+            ],
+          ),
           content: Text(message),
           actions: [
             TextButton(
@@ -166,6 +180,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       },
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
