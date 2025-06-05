@@ -41,7 +41,7 @@ class DatabaseConnection {
         return;
       } catch (e) {
         currentRetry++;
-        print('❌ Lỗi kết nối MongoDB (Lần ${currentRetry}): $e');
+        print('❌ Lỗi kết nối MongoDB (Lần $currentRetry): $e');
 
         if (currentRetry >= maxRetries) {
           _isConnected = false;

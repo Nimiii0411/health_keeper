@@ -1,11 +1,15 @@
 // screens/register_screen.dart (Updated)
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../database/mongodb_service.dart';
 import '../service/user_service.dart';
 import '../models/user_model.dart';
+import '../providers/theme_provider.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
@@ -186,179 +190,199 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
     return Scaffold(
       appBar: AppBar(
         title: Text('Đăng ký tài khoản'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+            onPressed: () {
+              themeProvider.toggleTheme();
+            },
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Trạng thái kết nối
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _isConnected ? Colors.green[100] : Colors.red[100],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  _isConnected ? 'Đã kết nối' : 'Mất kết nối',
-                  style: TextStyle(
-                    color: _isConnected ? Colors.green[800] : Colors.red[800],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: isDark 
+              ? [Colors.grey.shade900, Colors.grey.shade800]
+              : [Colors.blue.shade50, Colors.white],
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Trạng thái kết nối
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _isConnected ? Colors.green[100] : Colors.red[100],
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              SizedBox(height: 20),
-
-              // Họ và tên
-              TextFormField(
-                controller: _fullNameController,
-                decoration: InputDecoration(
-                  labelText: 'Họ và tên',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Vui lòng nhập họ và tên';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-
-              // Ngày sinh
-              TextFormField(
-                controller: _birthDateController,
-                decoration: InputDecoration(
-                  labelText: 'Ngày sinh',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.calendar_today),
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.date_range),
-                    onPressed: _selectDate,
+                  child: Text(
+                    _isConnected ? 'Đã kết nối' : 'Mất kết nối',
+                    style: TextStyle(
+                      color: _isConnected ? Colors.green[800] : Colors.red[800],
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-                readOnly: true,
-                onTap: _selectDate,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Vui lòng chọn ngày sinh';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
+                SizedBox(height: 20),
 
-              // Giới tính
-              DropdownButtonFormField<String>(
-                value: _selectedGender,
-                decoration: InputDecoration(
-                  labelText: 'Giới tính',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.wc),
-                ),
-                items: ['Nam', 'Nữ', 'Khác'].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedGender = newValue!;
-                  });
-                },
-              ),
-              SizedBox(height: 16),
-
-              // Email
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Vui lòng nhập email';
-                  }
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                    return 'Email không hợp lệ';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-
-              // Username
-              TextFormField(
-                controller: _usernameController,
-                decoration: InputDecoration(
-                  labelText: 'Tên đăng nhập',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.account_circle),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Vui lòng nhập tên đăng nhập';
-                  }
-                  if (value.length < 3) {
-                    return 'Tên đăng nhập phải có ít nhất 3 ký tự';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-
-              // Password
-              TextFormField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Mật khẩu',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Vui lòng nhập mật khẩu';
-                  }
-                  if (value.length < 5) {
-                    return 'Mật khẩu phải có ít nhất 5 ký tự';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 24),
-
-              // Nút đăng ký
-              ElevatedButton(
-                onPressed: _isLoading ? null : _registerUser,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                // Họ và tên
+                TextFormField(
+                  controller: _fullNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Họ và tên',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person),
                   ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Vui lòng nhập họ và tên';
+                    }
+                    return null;
+                  },
                 ),
-                child: _isLoading
-                    ? CircularProgressIndicator(color: Colors.white)
-                    : Text(
-                        'Đăng ký',
-                        style: TextStyle(fontSize: 16),
-                      ),
-              ),
-            ],
+                SizedBox(height: 16),
+
+                // Ngày sinh
+                TextFormField(
+                  controller: _birthDateController,
+                  decoration: InputDecoration(
+                    labelText: 'Ngày sinh',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.calendar_today),
+                    suffixIcon: IconButton(
+                      icon: Icon(Icons.date_range),
+                      onPressed: _selectDate,
+                    ),
+                  ),
+                  readOnly: true,
+                  onTap: _selectDate,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Vui lòng chọn ngày sinh';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+
+                // Giới tính
+                DropdownButtonFormField<String>(
+                  value: _selectedGender,
+                  decoration: InputDecoration(
+                    labelText: 'Giới tính',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.wc),
+                  ),
+                  items: ['Nam', 'Nữ', 'Khác'].map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedGender = newValue!;
+                    });
+                  },
+                ),
+                SizedBox(height: 16),
+
+                // Email
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.email),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Vui lòng nhập email';
+                    }
+                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                      return 'Email không hợp lệ';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+
+                // Username
+                TextFormField(
+                  controller: _usernameController,
+                  decoration: InputDecoration(
+                    labelText: 'Tên đăng nhập',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.account_circle),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Vui lòng nhập tên đăng nhập';
+                    }
+                    if (value.length < 3) {
+                      return 'Tên đăng nhập phải có ít nhất 3 ký tự';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+
+                // Password
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Mật khẩu',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.lock),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Vui lòng nhập mật khẩu';
+                    }
+                    if (value.length < 5) {
+                      return 'Mật khẩu phải có ít nhất 5 ký tự';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 24),
+
+                // Nút đăng ký
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _registerUser,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          'Đăng ký',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

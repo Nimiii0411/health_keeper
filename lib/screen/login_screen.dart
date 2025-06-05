@@ -1,11 +1,16 @@
 // screens/login_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../database/mongodb_service.dart';
 import '../service/user_service.dart';
 import '../models/user_model.dart';
+import '../providers/theme_provider.dart';
 import 'register_screen.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -118,13 +123,15 @@ class _LoginScreenState extends State<LoginScreen> {
               Text('Username: ${user.username}'),
               Text('Email: ${user.email}'),
             ],
-          ),
-          actions: [
+          ),          actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // TODO: Navigate to home screen
-                // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen(user: user)));
+                // Navigate to home screen
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => HomeScreen()),
+                );
               },
               child: Text('Tiếp tục'),
             ),
@@ -163,19 +170,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
     return Scaffold(
       appBar: AppBar(
         title: Text('Đăng nhập'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+            onPressed: () {
+              themeProvider.toggleTheme();
+            },
+          ),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade50, Colors.white],
+            colors: isDark 
+              ? [Colors.grey.shade900, Colors.grey.shade800]
+              : [Colors.blue.shade50, Colors.white],
           ),
         ),
         child: SafeArea(
@@ -187,12 +204,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Logo hoặc hình ảnh app
-                  Container(
+                  SizedBox(
                     height: 120,
                     child: Icon(
                       Icons.health_and_safety,
                       size: 80,
-                      color: Colors.blue,
+                      color: isDark ? Colors.blue.shade300 : Colors.blue,
                     ),
                   ),
                   SizedBox(height: 16),
