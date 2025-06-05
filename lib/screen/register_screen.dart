@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../database/mongodb_service.dart';
 import '../service/user_service.dart';
 import '../models/user_model.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -145,6 +146,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
+                Navigator.push(context, MaterialPageRoute(builder: (context) => LoginScreen()));
               },
               child: Text('OK'),
             ),
@@ -205,7 +207,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  _isConnected ? 'Đã kết nối database' : 'Chưa kết nối database',
+                  _isConnected ? 'Đã kết nối' : 'Mất kết nối',
                   style: TextStyle(
                     color: _isConnected ? Colors.green[800] : Colors.red[800],
                   ),

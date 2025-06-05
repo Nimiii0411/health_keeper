@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../database/mongodb_service.dart';
 import '../service/user_service.dart';
 import '../models/user_model.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -27,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   // Kết nối tới database khi khởi tạo
   Future<void> _connectToDatabase() async {
     try {
-      print('🔌 Bắt đầu kết nối database...');
+      print('🔌 Đang kiểm tra kết nối');
       await DatabaseConnection.connect();
       setState(() {
         _isConnected = true;
@@ -244,8 +245,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         SizedBox(width: 8),
                         Text(
                           _isConnected
-                              ? 'Đã kết nối database'
-                              : 'Chưa kết nối database',
+                              ? 'Đã kết nối'
+                              : 'Mất kết nối',
                           style: TextStyle(
                             color:
                                 _isConnected
@@ -409,10 +410,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   OutlinedButton(
                     onPressed: () {
                       // TODO: Navigate to register screen
-                      // Navigator.push(context, MaterialPageRoute(builder: (context) => RegisterScreen()));
-                      _showErrorDialog(
-                        'Chức năng đăng ký: Vui lòng sử dụng RegisterScreen đã có sẵn',
-                      );
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => RegisterScreen()));
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.blue,
