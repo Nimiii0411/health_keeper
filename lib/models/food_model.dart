@@ -29,23 +29,25 @@ class Food {
     this.image,
   });
 
+  // Chuyển từ Map sang Food object - QUAN TRỌNG!
   factory Food.fromMap(Map<String, dynamic> map) {
     return Food(
-      id: map['_id'],
-      bmiId: map['bmi_id'],
-      foodName: map['food_name'],
-      mealType: map['meal_type'],
-      servingSize: map['serving_size'],
-      servingUnit: map['serving_unit'],
-      calories: map['calories'],
-      protein: map['protein'],
-      fat: map['fat'],
-      fiber: map['fiber'],
-      carbs: map['carbs'],
+      id: map['_id'] as ObjectId?,
+      bmiId: map['bmi_id'] ?? 0,
+      foodName: map['food_name'] ?? '',
+      mealType: map['meal_type'] ?? '',
+      servingSize: map['serving_size'] ?? 0,
+      servingUnit: map['serving_unit'] ?? '',
+      calories: map['calories'] ?? 0,
+      protein: map['protein'] ?? 0,
+      fat: map['fat'] ?? 0,
+      fiber: map['fiber'] ?? 0,
+      carbs: map['carbs'] ?? 0,
       image: map['image'],
     );
   }
 
+  // Chuyển từ Food object sang Map
   Map<String, dynamic> toMap() {
     return {
       'bmi_id': bmiId,
@@ -59,45 +61,6 @@ class Food {
       'fiber': fiber,
       'carbs': carbs,
       'image': image,
-    };
-  }
-}
-
-class MealDaily {
-  ObjectId? id;
-  int userId;
-  String entryDate;
-  String mealType;
-  ObjectId foodId;
-  double serving;
-
-  MealDaily({
-    this.id,
-    required this.userId,
-    required this.entryDate,
-    required this.mealType,
-    required this.foodId,
-    required this.serving,
-  });
-
-  factory MealDaily.fromMap(Map<String, dynamic> map) {
-    return MealDaily(
-      id: map['_id'],
-      userId: map['user_id'],
-      entryDate: map['entry_date'],
-      mealType: map['meal_type'],
-      foodId: map['food_id'],
-      serving: map['serving'].toDouble(),
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'user_id': userId,
-      'entry_date': entryDate,
-      'meal_type': mealType,
-      'food_id': foodId,
-      'serving': serving,
     };
   }
 }
