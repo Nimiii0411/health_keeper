@@ -21,13 +21,93 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   bool _obscureOldPassword = true;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
-
   @override
   void dispose() {
     _oldPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  String? _validatePassword(String value) {
+    if (value.length < 8) {
+      return 'Mật khẩu phải có ít nhất 8 ký tự';
+    }
+    
+    // Kiểm tra chữ hoa
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+      return 'Mật khẩu phải có ít nhất 1 chữ hoa';
+    }
+    
+    // Kiểm tra chữ thường
+    if (!RegExp(r'[a-z]').hasMatch(value)) {
+      return 'Mật khẩu phải có ít nhất 1 chữ thường';
+    }
+    
+    // Kiểm tra số
+    if (!RegExp(r'[0-9]').hasMatch(value)) {
+      return 'Mật khẩu phải có ít nhất 1 chữ số';
+    }
+    
+    // Kiểm tra ký tự đặc biệt
+    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
+      return 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt';
+    }
+      return null;
+  }
+
+  List<Widget> _buildPasswordRequirements() {
+    String password = _newPasswordController.text;
+    
+    return [
+      _buildRequirementItem(
+        'Ít nhất 8 ký tự',
+        password.length >= 8,
+      ),
+      _buildRequirementItem(
+        'Có chữ hoa (A-Z)',
+        RegExp(r'[A-Z]').hasMatch(password),
+      ),
+      _buildRequirementItem(
+        'Có chữ thường (a-z)',
+        RegExp(r'[a-z]').hasMatch(password),
+      ),
+      _buildRequirementItem(
+        'Có số (0-9)',
+        RegExp(r'[0-9]').hasMatch(password),
+      ),
+      _buildRequirementItem(
+        'Có ký tự đặc biệt (!@#\$%^&*)',
+        RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password),
+      ),
+    ];
+  }
+
+  Widget _buildRequirementItem(String text, bool isValid) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(
+            isValid ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 16,
+            color: isValid ? Colors.green : Colors.grey.shade500,
+          ),
+          SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: isValid 
+                ? Colors.green 
+                : (Provider.of<ThemeProvider>(context).isDarkMode 
+                    ? Colors.grey.shade400 
+                    : Colors.grey.shade600),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _changePassword() async {
@@ -256,10 +336,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       color: isDark ? Colors.white : Colors.black87,
                     ),
                   ),
-                  SizedBox(height: 8),
-                  TextFormField(
+                  SizedBox(height: 8),                  TextFormField(
                     controller: _newPasswordController,
                     obscureText: _obscureNewPassword,
+                    onChanged: (value) {
+                      setState(() {}); // Cập nhật UI khi nhập mật khẩu
+                    },
                     style: TextStyle(
                       color: isDark ? Colors.white : Colors.black87,
                     ),
@@ -297,16 +379,39 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       ),
                       filled: true,
                       fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
-                    ),
-                    validator: (value) {
+                    ),                    validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Vui lòng nhập mật khẩu mới';
-                      }
-                      if (value.length < 6) {
-                        return 'Mật khẩu phải có ít nhất 6 ký tự';
-                      }
-                      return null;
+                      }                      return _validatePassword(value);
                     },
+                  ),
+                  SizedBox(height: 8),
+                  
+                  // Hướng dẫn yêu cầu mật khẩu
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey.shade800.withOpacity(0.5) : Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isDark ? Colors.grey.shade600 : Colors.blue.shade200,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Yêu cầu mật khẩu:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        ..._buildPasswordRequirements(),
+                      ],
+                    ),
                   ),
                   SizedBox(height: 24),
 

@@ -6,8 +6,19 @@ import 'settings_screen.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 
-class AccountScreen extends StatelessWidget {
+class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
+
+  @override
+  _AccountScreenState createState() => _AccountScreenState();
+}
+
+class _AccountScreenState extends State<AccountScreen> {
+  void _refreshUserData() {
+    setState(() {
+      // Trigger rebuild to get updated user data
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -158,11 +169,16 @@ class AccountScreen extends StatelessWidget {
                   leading: Icon(Icons.edit),
                   title: Text('Chỉnh sửa thông tin'),
                   trailing: Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    Navigator.push(
+                  onTap: () async {
+                    final result = await Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => EditProfileScreen()),
                     );
+                    
+                    // Nếu có kết quả trả về (cập nhật thành công), refresh data
+                    if (result == true) {
+                      _refreshUserData();
+                    }
                   },
                 ),
                 Divider(height: 1),

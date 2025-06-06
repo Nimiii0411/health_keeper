@@ -59,14 +59,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     super.dispose();
   }
-
   // Chọn ngày sinh
   Future<void> _selectDate() async {
+    final now = DateTime.now();
+    final minDate = DateTime(now.year - 100); // 100 tuổi
+    final maxDate = DateTime(now.year - 5);   // 5 tuổi
+    
     DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime(2000),
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
+      firstDate: minDate,  // Từ 100 tuổi trước
+      lastDate: maxDate,   // Đến 5 tuổi trước
+      helpText: 'Chọn ngày sinh (từ 5-100 tuổi)',
     );
     
     if (pickedDate != null) {
@@ -75,6 +79,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
             "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
       });
     }
+  }
+
+  // Tính tuổi từ ngày sinh
+  int _calculateAge(String birthDateString) {
+    try {
+      final birthDate = DateTime.parse(birthDateString);
+      final now = DateTime.now();
+      int age = now.year - birthDate.year;
+      if (now.month < birthDate.month || 
+          (now.month == birthDate.month && now.day < birthDate.day)) {
+        age--;
+      }
+      return age;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  // Validate email mạnh hơn
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email);
+  }
+
+  // Validate mật khẩu mạnh
+  String? _validatePassword(String password) {
+    if (password.isEmpty) {
+      return 'Vui lòng nhập mật khẩu';
+    }
+    if (password.length < 8) {
+      return 'Mật khẩu phải có ít nhất 8 ký tự';
+    }
+    if (!RegExp(r'[A-Z]').hasMatch(password)) {
+      return 'Mật khẩu phải có ít nhất 1 chữ hoa';
+    }
+    if (!RegExp(r'[a-z]').hasMatch(password)) {
+      return 'Mật khẩu phải có ít nhất 1 chữ thường';
+    }
+    if (!RegExp(r'[0-9]').hasMatch(password)) {
+      return 'Mật khẩu phải có ít nhất 1 số';
+    }
+    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) {
+      return 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt';
+    }
+    return null;
   }
 
   // Đăng ký user (sử dụng UserService)
@@ -282,12 +330,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               },
                             ),
                             
-                            SizedBox(height: 12),
-                              // Row with birth date and gender
+                            SizedBox(height: 12),                            // Row with birth date and gender
                             Row(
                               children: [
                                 Expanded(
-                                  flex: 3,
+                                  flex: 4,
                                   child: _buildTextField(
                                     controller: _birthDateController,
                                     hintText: 'Ngày sinh',
@@ -301,11 +348,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         color: isDark ? Colors.white70 : Color(0xFF667eea),
                                       ),
                                       onPressed: _selectDate,
-                                    ),
-                                    validator: (value) {
+                                    ),                                    validator: (value) {
                                       if (value == null || value.isEmpty) {
                                         return 'Chọn ngày sinh';
                                       }
+                                      
+                                      // Kiểm tra tuổi
+                                      final age = _calculateAge(value);
+                                      if (age < 5) {
+                                        return 'Tuổi tối thiểu là 5 tuổi';
+                                      }
+                                      if (age > 100) {
+                                        return 'Tuổi tối đa là 100 tuổi';
+                                      }
+                                      
                                       return null;
                                     },
                                   ),
@@ -326,13 +382,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               hintText: 'Email',
                               icon: Icons.email_outlined,
                               isDark: isDark,
-                              keyboardType: TextInputType.emailAddress,
-                              validator: (value) {
+                              keyboardType: TextInputType.emailAddress,                              validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
                                   return 'Vui lòng nhập email';
                                 }
-                                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                                  return 'Email không hợp lệ';
+                                if (!_isValidEmail(value.trim())) {
+                                  return 'Email không hợp lệ (VD: user@example.com)';
                                 }
                                 return null;
                               },
@@ -345,36 +400,69 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               controller: _usernameController,
                               hintText: 'Tên đăng nhập',
                               icon: Icons.account_circle_outlined,
-                              isDark: isDark,
-                              validator: (value) {
+                              isDark: isDark,                              validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
                                   return 'Vui lòng nhập tên đăng nhập';
                                 }
                                 if (value.length < 3) {
                                   return 'Tên đăng nhập phải có ít nhất 3 ký tự';
                                 }
+                                if (value.length > 20) {
+                                  return 'Tên đăng nhập không được quá 20 ký tự';
+                                }
+                                if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
+                                  return 'Tên đăng nhập chỉ chứa chữ, số và dấu gạch dưới';
+                                }
                                 return null;
                               },
                             ),
                             
                             SizedBox(height: 12),
-                            
-                            // Password field
+                              // Password field
                             _buildTextField(
                               controller: _passwordController,
                               hintText: 'Mật khẩu',
                               icon: Icons.lock_outline,
                               isDark: isDark,
-                              isPassword: true,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
+                              isPassword: true,                              validator: (value) {
+                                if (value == null) {
                                   return 'Vui lòng nhập mật khẩu';
                                 }
-                                if (value.length < 5) {
-                                  return 'Mật khẩu phải có ít nhất 5 ký tự';
-                                }
-                                return null;
+                                return _validatePassword(value);
                               },
+                            ),
+                            
+                            // Password requirement info
+                            Container(
+                              margin: EdgeInsets.only(top: 8),
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.blue.withOpacity(0.1) : Colors.blue.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isDark ? Colors.blue.withOpacity(0.3) : Colors.blue.withOpacity(0.2),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Yêu cầu mật khẩu:',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.blue[300] : Colors.blue[700],
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  _buildPasswordRequirement('• Ít nhất 8 ký tự', isDark),
+                                  _buildPasswordRequirement('• Có chữ hoa (A-Z)', isDark),
+                                  _buildPasswordRequirement('• Có chữ thường (a-z)', isDark),
+                                  _buildPasswordRequirement('• Có số (0-9)', isDark),
+                                  _buildPasswordRequirement('• Có ký tự đặc biệt (!@#\$%^&*)', isDark),
+                                ],
+                              ),
                             ),
                             
                             SizedBox(height: 20),
@@ -569,8 +657,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         validator: validator,
       ),
     );
-  }
-  Widget _buildGenderDropdown(bool isDark) {
+  }  Widget _buildGenderDropdown(bool isDark) {
     return Container(
       decoration: BoxDecoration(
         color: isDark
@@ -585,7 +672,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         value: _selectedGender,
         style: TextStyle(
           color: isDark ? Colors.white : Colors.black87,
-          fontSize: 14,
+          fontSize: 13,
         ),
         dropdownColor: isDark ? Color(0xFF2D2D44) : Colors.white,
         decoration: InputDecoration(
@@ -594,18 +681,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             color: isDark 
                 ? Colors.white.withOpacity(0.6)
                 : Colors.black.withOpacity(0.6),
-            fontSize: 14,
-          ),
-          prefixIcon: Padding(
-            padding: EdgeInsets.all(12),
-            child: Icon(
-              Icons.wc_outlined,
-              color: isDark ? Colors.white70 : Color(0xFF667eea),
-              size: 20,
-            ),
+            fontSize: 13,
           ),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 18),
         ),
         items: ['Nam', 'Nữ', 'Khác'].map((String value) {
           return DropdownMenuItem<String>(
@@ -614,7 +693,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               value,
               style: TextStyle(
                 color: isDark ? Colors.white : Colors.black87,
-                fontSize: 14,
+                fontSize: 13,
               ),
             ),
           );
@@ -827,6 +906,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
             size: 20,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordRequirement(String text, bool isDark) {
+    return Padding(
+      padding: EdgeInsets.only(top: 2),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          color: isDark ? Colors.blue[200] : Colors.blue[600],
+        ),
       ),
     );
   }

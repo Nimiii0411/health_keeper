@@ -1,507 +1,573 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/reminder_model.dart';
+import '../service/reminder_service.dart';
 import '../service/notification_service.dart';
 import '../providers/theme_provider.dart';
-import '../widgets/theme_toggle.dart';
 
 class ReminderScreen extends StatefulWidget {
-  const ReminderScreen({super.key});
+  final int userId;
+  
+  const ReminderScreen({super.key, required this.userId});
 
   @override
   _ReminderScreenState createState() => _ReminderScreenState();
 }
 
 class _ReminderScreenState extends State<ReminderScreen> {
-  List<Reminder> reminders = [
-    Reminder(
-      id: 1,
-      title: 'Uống thuốc',
-      description: 'Uống thuốc huyết áp',
-      time: TimeOfDay(hour: 8, minute: 0),
-      isActive: true,
-      type: ReminderType.medicine,
-    ),
-    Reminder(
-      id: 2,
-      title: 'Tập thể dục',
-      description: 'Chạy bộ buổi sáng',
-      time: TimeOfDay(hour: 6, minute: 30),
-      isActive: true,
-      type: ReminderType.exercise,
-    ),
-    Reminder(
-      id: 3,
-      title: 'Khám bác sĩ',
-      description: 'Khám tim mạch định kỳ',
-      time: TimeOfDay(hour: 14, minute: 0),
-      isActive: false,
-      type: ReminderType.doctor,
-    ),
-  ];
+  List<Reminder> reminders = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _scheduleActiveReminders();
+    _loadReminders();
+  }
+  Future<void> _loadReminders() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      // Lấy TẤT CẢ reminders của user (cả active và inactive)
+      final userReminders = await ReminderService.getUserReminders(widget.userId);
+      setState(() {
+        reminders = userReminders;
+        isLoading = false;
+      });
+      
+      // Lên lịch thông báo cho các reminder active
+      _scheduleActiveReminders();
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      print('❌ Lỗi tải reminders: $e');
+    }
   }
 
   void _scheduleActiveReminders() {
     for (var reminder in reminders) {
-      if (reminder.isActive) {
+      if (reminder.isActive && reminder.isFuture) {
         _scheduleNotification(reminder);
       }
     }
   }
 
-  void _scheduleNotification(Reminder reminder) async {
-    // Tạo DateTime cho ngày hôm nay với thời gian từ reminder
-    final now = DateTime.now();
-    var scheduledDate = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      reminder.time.hour,
-      reminder.time.minute,
-    );
-
-    // Nếu thời gian đã qua trong ngày hôm nay, lên lịch cho ngày mai
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(Duration(days: 1));
+  Future<void> _scheduleNotification(Reminder reminder) async {
+    try {
+      await NotificationService.scheduleNotification(
+        id: reminder.id.hashCode,
+        title: 'Nhắc nhở HealthKeeper',
+        body: reminder.message,
+        scheduledDate: reminder.fullDateTime,
+      );
+    } catch (e) {
+      print('❌ Lỗi lên lịch thông báo: $e');
     }
-
-    await NotificationService.scheduleNotification(
-      id: reminder.id,
-      title: reminder.title,
-      body: reminder.description,
-      scheduledDate: scheduledDate,
-    );
-  }
-
-  void _cancelNotification(int id) async {
-    await NotificationService.cancelNotification(id);
-  }
-
-  void _toggleReminder(Reminder reminder) async {
-    setState(() {
-      reminder.isActive = !reminder.isActive;
-    });
-
-    if (reminder.isActive) {
-      _scheduleNotification(reminder);
-    } else {
-      _cancelNotification(reminder.id);
-    }
-  }
-
-  int _generateReminderId() {
-    return reminders.isEmpty ? 1 : reminders.map((r) => r.id).reduce((a, b) => a > b ? a : b) + 1;
   }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+    final isDark = themeProvider.isDarkMode;
+
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: themeProvider.isDarkMode
-                ? [Colors.grey[900]!, Colors.grey[800]!]
-                : [Colors.blue[50]!, Colors.white],
+      appBar: AppBar(
+        title: Text(
+          'Nhắc nhở',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black87,
           ),
         ),
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Nhắc nhở của bạn',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  ThemeToggleButton(),
-                ],
-              ),
-              SizedBox(height: 16),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: reminders.length,
-                  itemBuilder: (context, index) {
-                    final reminder = reminders[index];
-                    return Card(
-                      margin: EdgeInsets.only(bottom: 12),
-                      elevation: themeProvider.isDarkMode ? 8 : 4,
-                      color: themeProvider.isDarkMode ? Colors.grey[800] : Colors.white,
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: _getReminderColor(reminder.type),
-                          child: Icon(
-                            _getReminderIcon(reminder.type),
-                            color: Colors.white,
-                          ),
-                        ),
-                        title: Text(
-                          reminder.title,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: themeProvider.isDarkMode ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              reminder.description,
-                              style: TextStyle(
-                                color: themeProvider.isDarkMode ? Colors.grey[300] : Colors.grey[600],
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              '${reminder.time.hour.toString().padLeft(2, '0')}:${reminder.time.minute.toString().padLeft(2, '0')}',
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        trailing: Switch(
-                          value: reminder.isActive,
-                          onChanged: (value) {
-                            _toggleReminder(reminder);
-                          },
-                        ),
-                        onTap: () => _showEditReminderDialog(reminder, index),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+        backgroundColor: isDark ? Color(0xFF2D2D44) : Colors.white,
+        elevation: 0,
+        iconTheme: IconThemeData(
+          color: isDark ? Colors.white : Colors.black87,
         ),
       ),
+      backgroundColor: isDark ? Color(0xFF1A1A2E) : Color(0xFFF5F7FA),
+      body: isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                color: isDark ? Colors.white : Color(0xFF667eea),
+              ),
+            )
+          : reminders.isEmpty
+              ? _buildEmptyState(isDark)
+              : _buildReminderList(isDark),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddReminderDialog(),
-        backgroundColor: Colors.blue,
-        child: Icon(Icons.add),
+        backgroundColor: Color(0xFF667eea),
+        child: Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  Color _getReminderColor(ReminderType type) {
-    switch (type) {
-      case ReminderType.medicine:
-        return Colors.red;
-      case ReminderType.exercise:
-        return Colors.green;
-      case ReminderType.doctor:
-        return Colors.blue;
-      case ReminderType.other:
-        return Colors.orange;
-    }
+  Widget _buildEmptyState(bool isDark) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.notifications_none,
+            size: 80,
+            color: isDark ? Colors.white54 : Colors.grey,
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Chưa có nhắc nhở nào',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Thêm nhắc nhở để không bỏ lỡ\ncác hoạt động quan trọng',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              color: isDark ? Colors.white70 : Colors.grey[600],
+            ),
+          ),
+          SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () => _showAddReminderDialog(),
+            icon: Icon(Icons.add),
+            label: Text('Thêm nhắc nhở đầu tiên'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFF667eea),
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  IconData _getReminderIcon(ReminderType type) {
-    switch (type) {
-      case ReminderType.medicine:
-        return Icons.medication;
-      case ReminderType.exercise:
-        return Icons.fitness_center;
-      case ReminderType.doctor:
-        return Icons.local_hospital;
-      case ReminderType.other:
-        return Icons.notifications;
-    }
+  Widget _buildReminderList(bool isDark) {
+    return ListView.builder(
+      padding: EdgeInsets.all(16),
+      itemCount: reminders.length,
+      itemBuilder: (context, index) {
+        final reminder = reminders[index];
+        return Card(
+          margin: EdgeInsets.only(bottom: 12),
+          elevation: isDark ? 8 : 4,
+          color: isDark ? Color(0xFF2D2D44) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ListTile(
+            contentPadding: EdgeInsets.all(16),
+            leading: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: reminder.isActive 
+                    ? Color(0xFF667eea).withOpacity(0.2)
+                    : Colors.grey.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.notifications,
+                color: reminder.isActive ? Color(0xFF667eea) : Colors.grey,
+              ),
+            ),            title: Text(
+              reminder.message,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: reminder.isActive 
+                    ? (isDark ? Colors.white : Colors.black87)
+                    : (isDark ? Colors.white54 : Colors.grey),
+                decoration: reminder.isActive ? null : TextDecoration.lineThrough,
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 4),
+                Text(
+                  '${reminder.formattedDate} lúc ${reminder.formattedTime}',
+                  style: TextStyle(
+                    color: isDark ? Colors.white70 : Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),                if (reminder.isToday)
+                  Container(
+                    margin: EdgeInsets.only(top: 4),
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Hôm nay',
+                      style: TextStyle(
+                        color: Colors.orange,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                if (!reminder.isActive)
+                  Container(
+                    margin: EdgeInsets.only(top: 4),
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Tạm dừng',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            trailing: PopupMenuButton<String>(
+              icon: Icon(
+                Icons.more_vert,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+              onSelected: (value) {
+                switch (value) {
+                  case 'edit':
+                    _showEditReminderDialog(reminder);
+                    break;
+                  case 'delete':
+                    _deleteReminder(reminder);
+                    break;
+                  case 'toggle':
+                    _toggleReminderStatus(reminder);
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, size: 20),
+                      SizedBox(width: 8),
+                      Text('Chỉnh sửa'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'toggle',
+                  child: Row(
+                    children: [
+                      Icon(
+                        reminder.isActive ? Icons.pause : Icons.play_arrow,
+                        size: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Text(reminder.isActive ? 'Tạm dừng' : 'Kích hoạt'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, size: 20, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Xóa', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showAddReminderDialog() {
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
+    final messageController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
     TimeOfDay selectedTime = TimeOfDay.now();
-    ReminderType selectedType = ReminderType.other;
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('Thêm nhắc nhở mới'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: titleController,
-                      decoration: InputDecoration(
-                        labelText: 'Tiêu đề',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    TextField(
-                      controller: descriptionController,
-                      decoration: InputDecoration(
-                        labelText: 'Mô tả',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    DropdownButtonFormField<ReminderType>(
-                      value: selectedType,
-                      decoration: InputDecoration(
-                        labelText: 'Loại nhắc nhở',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: ReminderType.values
-                          .map((type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(_getReminderTypeName(type)),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedType = value!;
-                        });
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    ListTile(
-                      title: Text('Thời gian'),
-                      subtitle: Text(
-                        '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
-                      ),
-                      trailing: Icon(Icons.access_time),
-                      onTap: () async {
-                        final time = await showTimePicker(
-                          context: context,
-                          initialTime: selectedTime,
-                        );
-                        if (time != null) {
-                          setState(() {
-                            selectedTime = time;
-                          });
-                        }
-                      },
-                    ),
-                  ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Thêm nhắc nhở mới'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: messageController,
+                  decoration: InputDecoration(
+                    labelText: 'Nội dung nhắc nhở',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
                 ),
-              ),
-              actions: [
-                TextButton(
-                  child: Text('Hủy'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-                TextButton(
-                  child: Text('Thêm'),
-                  onPressed: () {
-                    if (titleController.text.isNotEmpty) {
-                      final newReminder = Reminder(
-                        id: _generateReminderId(),
-                        title: titleController.text,
-                        description: descriptionController.text,
-                        time: selectedTime,
-                        isActive: true,
-                        type: selectedType,
-                      );
-                      setState(() {
-                        reminders.add(newReminder);
-                      });
-                      // Schedule notification for new active reminder
-                      if (newReminder.isActive) {
-                        _scheduleNotification(newReminder);
-                      }
-                      Navigator.of(context).pop();
-                    }
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      },
-    ).then((_) {
-      setState(() {});
-    });
-  }
-
-  void _showEditReminderDialog(Reminder reminder, int index) {
-    final titleController = TextEditingController(text: reminder.title);
-    final descriptionController = TextEditingController(text: reminder.description);
-    TimeOfDay selectedTime = reminder.time;
-    ReminderType selectedType = reminder.type;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('Chỉnh sửa nhắc nhở'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: titleController,
-                      decoration: InputDecoration(
-                        labelText: 'Tiêu đề',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    TextField(
-                      controller: descriptionController,
-                      decoration: InputDecoration(
-                        labelText: 'Mô tả',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    DropdownButtonFormField<ReminderType>(
-                      value: selectedType,
-                      decoration: InputDecoration(
-                        labelText: 'Loại nhắc nhở',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: ReminderType.values
-                          .map((type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(_getReminderTypeName(type)),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedType = value!;
-                        });
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    ListTile(
-                      title: Text('Thời gian'),
-                      subtitle: Text(
-                        '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
-                      ),
-                      trailing: Icon(Icons.access_time),
-                      onTap: () async {
-                        final time = await showTimePicker(
-                          context: context,
-                          initialTime: selectedTime,
-                        );
-                        if (time != null) {
-                          setState(() {
-                            selectedTime = time;
-                          });
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  child: Text('Xóa', style: TextStyle(color: Colors.red)),
-                  onPressed: () {
-                    // Cancel notification before deleting
-                    _cancelNotification(reminder.id);
-                    setState(() {
-                      reminders.removeAt(index);
-                    });
-                    Navigator.of(context).pop();
-                  },
-                ),
-                TextButton(
-                  child: Text('Hủy'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-                TextButton(
-                  child: Text('Lưu'),
-                  onPressed: () {
-                    // Cancel existing notification
-                    _cancelNotification(reminder.id);
-                    
-                    // Update reminder
-                    final updatedReminder = Reminder(
-                      id: reminder.id,
-                      title: titleController.text,
-                      description: descriptionController.text,
-                      time: selectedTime,
-                      isActive: reminder.isActive,
-                      type: selectedType,
+                SizedBox(height: 16),
+                ListTile(
+                  title: Text('Ngày'),
+                  subtitle: Text(
+                    "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}",
+                  ),
+                  trailing: Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(Duration(days: 365)),
                     );
-                    
-                    setState(() {
-                      reminders[index] = updatedReminder;
-                    });
-                    
-                    // Schedule notification if active
-                    if (updatedReminder.isActive) {
-                      _scheduleNotification(updatedReminder);
+                    if (date != null) {
+                      setDialogState(() {
+                        selectedDate = date;
+                      });
                     }
-                    
-                    Navigator.of(context).pop();
+                  },
+                ),
+                ListTile(
+                  title: Text('Thời gian'),
+                  subtitle: Text(selectedTime.format(context)),
+                  trailing: Icon(Icons.access_time),
+                  onTap: () async {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: selectedTime,
+                    );
+                    if (time != null) {
+                      setDialogState(() {
+                        selectedTime = time;
+                      });
+                    }
                   },
                 ),
               ],
-            );
-          },
-        );
-      },
-    ).then((_) {
-      setState(() {});
-    });
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Hủy'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (messageController.text.isNotEmpty) {
+                  final reminder = Reminder(
+                    userId: widget.userId,
+                    message: messageController.text,
+                    reminderDate: selectedDate,
+                    remindTime: "${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}",
+                  );                  final success = await ReminderService.createReminder(reminder);
+                  if (success) {
+                    if (mounted) {
+                      Navigator.pop(context);
+                      _loadReminders();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Đã thêm nhắc nhở thành công!')),
+                      );
+                    }
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Lỗi thêm nhắc nhở!')),
+                      );
+                    }
+                  }
+                }
+              },
+              child: Text('Thêm'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  String _getReminderTypeName(ReminderType type) {
-    switch (type) {
-      case ReminderType.medicine:
-        return 'Thuốc';
-      case ReminderType.exercise:
-        return 'Tập luyện';
-      case ReminderType.doctor:
-        return 'Bác sĩ';
-      case ReminderType.other:
-        return 'Khác';
+  void _showEditReminderDialog(Reminder reminder) {
+    final messageController = TextEditingController(text: reminder.message);
+    DateTime selectedDate = reminder.reminderDate;
+    final timeParts = reminder.remindTime.split(':');
+    TimeOfDay selectedTime = TimeOfDay(
+      hour: int.parse(timeParts[0]),
+      minute: int.parse(timeParts[1]),
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Chỉnh sửa nhắc nhở'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: messageController,
+                  decoration: InputDecoration(
+                    labelText: 'Nội dung nhắc nhở',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+                SizedBox(height: 16),
+                ListTile(
+                  title: Text('Ngày'),
+                  subtitle: Text(
+                    "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}",
+                  ),
+                  trailing: Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(Duration(days: 365)),
+                    );
+                    if (date != null) {
+                      setDialogState(() {
+                        selectedDate = date;
+                      });
+                    }
+                  },
+                ),
+                ListTile(
+                  title: Text('Thời gian'),
+                  subtitle: Text(selectedTime.format(context)),
+                  trailing: Icon(Icons.access_time),
+                  onTap: () async {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: selectedTime,
+                    );
+                    if (time != null) {
+                      setDialogState(() {
+                        selectedTime = time;
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Hủy'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (messageController.text.isNotEmpty) {
+                  final updatedReminder = reminder.copyWith(
+                    message: messageController.text,
+                    reminderDate: selectedDate,
+                    remindTime: "${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}",
+                  );                  final success = await ReminderService.updateReminder(
+                    reminder.id!,
+                    updatedReminder,
+                  );
+                  
+                  if (success) {
+                    if (mounted) {
+                      Navigator.pop(context);
+                      _loadReminders();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Đã cập nhật nhắc nhở thành công!')),
+                      );
+                    }
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Lỗi cập nhật nhắc nhở!')),
+                      );
+                    }
+                  }
+                }
+              },
+              child: Text('Cập nhật'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteReminder(Reminder reminder) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Xác nhận xóa'),
+        content: Text('Bạn có chắc chắn muốn xóa nhắc nhở này?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text('Xóa'),
+          ),
+        ],
+      ),
+    );    if (confirmed == true) {
+      final success = await ReminderService.deleteReminder(reminder.id!);
+      if (success) {
+        _loadReminders();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Đã xóa nhắc nhở thành công!')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Lỗi xóa nhắc nhở!')),
+          );
+        }
+      }
     }
   }
-}
 
-class Reminder {
-  int id;
-  String title;
-  String description;
-  TimeOfDay time;
-  bool isActive;
-  ReminderType type;
-
-  Reminder({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.time,
-    required this.isActive,
-    required this.type,
-  });
-}
-
-enum ReminderType {
-  medicine,
-  exercise,
-  doctor,
-  other,
+  Future<void> _toggleReminderStatus(Reminder reminder) async {
+    final updatedReminder = reminder.copyWith(isActive: !reminder.isActive);
+    final success = await ReminderService.updateReminder(
+      reminder.id!,
+      updatedReminder,    );
+    
+    if (success) {
+      _loadReminders();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              reminder.isActive 
+                  ? 'Đã tạm dừng nhắc nhở' 
+                  : 'Đã kích hoạt nhắc nhở',
+            ),
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi cập nhật trạng thái nhắc nhở!')),
+        );
+      }
+    }
+  }
 }

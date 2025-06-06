@@ -16,14 +16,13 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
+class _HomeScreenState extends State<HomeScreen> {  int _selectedIndex = 0;
     List<Widget> get _screens => [
     EnhancedHomeContent(onNavigate: _navigateToScreen),
     AccountScreen(),
     DiaryScreen(),
     ExerciseScreen(),
-    ReminderScreen(),
+    ReminderScreen(userId: UserSession.currentUserId ?? 1),
   ];
 
   final List<String> _titles = [

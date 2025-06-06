@@ -20,6 +20,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   
   String _selectedGender = 'Nam';
   bool _isLoading = false;
+  bool _hasUpdated = false; // Theo dõi xem có cập nhật thành công không
   User? _currentUser;
 
   @override
@@ -37,7 +38,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _selectedGender = _currentUser!.gender;
     }
   }
-
   @override
   void dispose() {
     _fullNameController.dispose();
@@ -46,12 +46,66 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  int _calculateAge(String birthDateString) {
+    try {
+      List<String> parts = birthDateString.split('/');
+      if (parts.length == 3) {
+        int day = int.parse(parts[0]);
+        int month = int.parse(parts[1]);
+        int year = int.parse(parts[2]);
+        
+        DateTime birthDate = DateTime(year, month, day);
+        DateTime today = DateTime.now();
+        
+        int age = today.year - birthDate.year;
+        if (today.month < birthDate.month || 
+            (today.month == birthDate.month && today.day < birthDate.day)) {
+          age--;
+        }
+        
+        return age;
+      }
+    } catch (e) {
+      // Nếu có lỗi parse thì trả về -1
+    }
+    return -1;
+  }
   Future<void> _selectBirthDate() async {
+    DateTime now = DateTime.now();
+    DateTime maxDate = DateTime(now.year - 5, now.month, now.day); // Tối thiểu 5 tuổi
+    DateTime minDate = DateTime(now.year - 100, now.month, now.day); // Tối đa 100 tuổi
+    
+    DateTime initialDate = maxDate;
+    
+    // Nếu đã có ngày sinh, thử parse để làm initialDate
+    if (_birthDateController.text.isNotEmpty) {
+      try {
+        List<String> parts = _birthDateController.text.split('/');
+        if (parts.length == 3) {
+          DateTime currentBirthDate = DateTime(
+            int.parse(parts[2]), // year
+            int.parse(parts[1]), // month
+            int.parse(parts[0])  // day
+          );
+          if (currentBirthDate.isAfter(minDate) && currentBirthDate.isBefore(maxDate)) {
+            initialDate = currentBirthDate;
+          }
+        }
+      } catch (e) {
+        // Nếu parse lỗi thì dùng maxDate
+        initialDate = maxDate;
+      }
+    }
+
     DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
+      initialDate: initialDate,
+      firstDate: minDate, // 100 tuổi trước
+      lastDate: maxDate,  // 5 tuổi trước
+      helpText: 'Chọn ngày sinh (từ 5-100 tuổi)',
+      errorFormatText: 'Định dạng ngày không hợp lệ',
+      errorInvalidText: 'Ngày sinh không hợp lệ',
+      fieldLabelText: 'Ngày sinh',
     );
 
     if (pickedDate != null) {
@@ -88,11 +142,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
 
       // Cập nhật database
-      bool success = await UserService.updateUser(updatedUser);
-
-      if (success) {
+      bool success = await UserService.updateUser(updatedUser);      if (success) {
         // Cập nhật session
         UserSession.updateUser(updatedUser);
+        _hasUpdated = true; // Đánh dấu đã cập nhật thành công
         _showSuccessDialog();
       } else {
         throw Exception('Không thể cập nhật thông tin');
@@ -106,7 +159,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
     }
   }
-
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -123,8 +175,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pop(); // Return to account screen
+                Navigator.of(context).pop(); // Đóng dialog
+                Navigator.of(context).pop(true); // Quay về AccountScreen với kết quả true
               },
               child: Text('OK'),
             ),
@@ -158,9 +210,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
       },
     );
-  }
-
-  @override
+  }  @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
@@ -170,6 +220,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         title: Text('Chỉnh sửa thông tin'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pop(_hasUpdated);
+          },
+        ),
         actions: [
           IconButton(
             icon: Icon(Icons.save),
@@ -408,11 +464,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       filled: true,
                       fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
                     ),
-                    onTap: _selectBirthDate,
-                    validator: (value) {
+                    onTap: _selectBirthDate,                    validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Vui lòng chọn ngày sinh';
                       }
+                      
+                      int age = _calculateAge(value);
+                      if (age < 5) {
+                        return 'Tuổi phải từ 5 tuổi trở lên';
+                      }
+                      if (age > 100) {
+                        return 'Tuổi không được quá 100 tuổi';
+                      }
+                      if (age == -1) {
+                        return 'Ngày sinh không hợp lệ';
+                      }
+                      
                       return null;
                     },
                   ),
@@ -445,21 +512,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               SizedBox(width: 12),
                               Text('Đang cập nhật...'),
                             ],
-                          )
-                        : Text(
+                          )                        : Text(
                             'Lưu thay đổi',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                  ),
+                  ), // Đóng ElevatedButton
                   SizedBox(height: 16),
 
                   // Nút hủy
                   OutlinedButton(
                     onPressed: () {
-                      Navigator.of(context).pop();
+                      Navigator.of(context).pop(_hasUpdated);
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.blue,
@@ -476,8 +542,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ),
-                ],
+                  ),                ],
               ),
             ),
           ),
