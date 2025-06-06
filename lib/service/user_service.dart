@@ -180,4 +180,111 @@ class UserService {
       return 0;
     }
   }
+
+  // Cập nhật thông tin user
+  static Future<bool> updateUser(User user) async {
+    try {
+      var collection = _collection;
+      if (collection == null) {
+        throw Exception('Database chưa được kết nối');
+      }
+
+      print('🔄 Đang cập nhật user: ${user.username}');      var result = await collection.updateOne(
+        where.eq('id_user', user.idUser),
+        modify
+          .set('full_name', user.fullName)
+          .set('email', user.email)
+          .set('gender', user.gender)
+          .set('birth_date', user.birthDate),
+      );
+
+      if (result.isSuccess) {
+        print('✅ Cập nhật thành công!');
+        return true;
+      } else {
+        print('❌ Không có thay đổi nào được cập nhật');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Lỗi cập nhật user: $e');
+      return false;
+    }
+  }
+
+  // Đổi mật khẩu
+  static Future<bool> changePassword(int userId, String oldPassword, String newPassword) async {
+    try {
+      var collection = _collection;
+      if (collection == null) {
+        throw Exception('Database chưa được kết nối');
+      }
+
+      print('🔐 Đang đổi mật khẩu cho user ID: $userId');
+
+      // Kiểm tra mật khẩu cũ
+      var user = await collection.findOne({
+        'id_user': userId,
+        'password': oldPassword,
+      });
+
+      if (user == null) {
+        throw Exception('Mật khẩu cũ không đúng!');
+      }      // Cập nhật mật khẩu mới
+      var result = await collection.updateOne(
+        where.eq('id_user', userId),
+        modify.set('password', newPassword),
+      );
+
+      if (result.isSuccess) {
+        print('✅ Đổi mật khẩu thành công!');
+        return true;
+      } else {
+        print('❌ Đổi mật khẩu thất bại');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Lỗi đổi mật khẩu: $e');
+      rethrow;
+    }
+  }
+
+  // Kiểm tra username có tồn tại không (trừ user hiện tại)
+  static Future<bool> isUsernameAvailable(String username, int currentUserId) async {
+    try {
+      var collection = _collection;
+      if (collection == null) {
+        return false;
+      }
+
+      var result = await collection.findOne({
+        'username': username,
+        'id_user': {'\$ne': currentUserId}
+      });
+
+      return result == null; // null means username is available
+    } catch (e) {
+      print('❌ Lỗi kiểm tra username: $e');
+      return false;
+    }
+  }
+
+  // Kiểm tra email có tồn tại không (trừ user hiện tại)
+  static Future<bool> isEmailAvailable(String email, int currentUserId) async {
+    try {
+      var collection = _collection;
+      if (collection == null) {
+        return false;
+      }
+
+      var result = await collection.findOne({
+        'email': email,
+        'id_user': {'\$ne': currentUserId}
+      });
+
+      return result == null; // null means email is available
+    } catch (e) {
+      print('❌ Lỗi kiểm tra email: $e');
+      return false;
+    }
+  }
 }

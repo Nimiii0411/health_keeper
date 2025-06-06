@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screen/login_screen.dart';
+import 'screen/home_screen.dart';
 import 'providers/theme_provider.dart';
 import 'service/notification_service.dart';
 
@@ -23,13 +24,16 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => ThemeProvider(),
       child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
-          return MaterialApp(
+        builder: (context, themeProvider, child) {          return MaterialApp(
             title: 'HealthKeeper',
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
             home: LoginScreen(),
+            routes: {
+              '/login': (context) => LoginScreen(),
+              '/home': (context) => HomeScreen(),
+            },
             debugShowCheckedModeBanner: false,
           );
         },

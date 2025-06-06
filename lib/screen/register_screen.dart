@@ -131,13 +131,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _selectedGender = 'Nam';
     });
   }
-
   // Hiển thị dialog thành công
   void _showSuccessDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               Icon(Icons.check_circle, color: Colors.green),
@@ -150,7 +152,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                Navigator.push(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+                Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) => LoginScreen(),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      return SlideTransition(
+                        position: animation.drive(
+                          Tween(begin: Offset(-1.0, 0.0), end: Offset.zero),
+                        ),
+                        child: child,
+                      );
+                    },
+                  ),
+                );
               },
               child: Text('OK'),
             ),
@@ -159,13 +174,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       },
     );
   }
-
   // Hiển thị dialog lỗi
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               Icon(Icons.error, color: Colors.red),
@@ -186,205 +203,630 @@ class _RegisterScreenState extends State<RegisterScreen> {
       },
     );
   }
-
-
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
     
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Đăng ký tài khoản'),
-        actions: [
-          IconButton(
-            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
-            onPressed: () {
-              themeProvider.toggleTheme();
-            },
-          ),
-        ],
-      ),
       body: Container(
+        height: MediaQuery.of(context).size.height,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: isDark 
-              ? [Colors.grey.shade900, Colors.grey.shade800]
-              : [Colors.blue.shade50, Colors.white],
+              ? [
+                  Color(0xFF1A1A2E),
+                  Color(0xFF16213E),
+                  Color(0xFF0F3460),
+                ]
+              : [
+                  Color(0xFF667eea),
+                  Color(0xFF764ba2),
+                  Color(0xFFf093fb),
+                ],
           ),
         ),
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Trạng thái kết nối
-                Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: _isConnected ? Colors.green[100] : Colors.red[100],
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    _isConnected ? 'Đã kết nối' : 'Mất kết nối',
-                    style: TextStyle(
-                      color: _isConnected ? Colors.green[800] : Colors.red[800],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                SizedBox(height: 20),
-
-                // Họ và tên
-                TextFormField(
-                  controller: _fullNameController,
-                  decoration: InputDecoration(
-                    labelText: 'Họ và tên',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Vui lòng nhập họ và tên';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16),
-
-                // Ngày sinh
-                TextFormField(
-                  controller: _birthDateController,
-                  decoration: InputDecoration(
-                    labelText: 'Ngày sinh',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_today),
-                    suffixIcon: IconButton(
-                      icon: Icon(Icons.date_range),
-                      onPressed: _selectDate,
-                    ),
-                  ),
-                  readOnly: true,
-                  onTap: _selectDate,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Vui lòng chọn ngày sinh';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16),
-
-                // Giới tính
-                DropdownButtonFormField<String>(
-                  value: _selectedGender,
-                  decoration: InputDecoration(
-                    labelText: 'Giới tính',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.wc),
-                  ),
-                  items: ['Nam', 'Nữ', 'Khác'].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedGender = newValue!;
-                    });
-                  },
-                ),
-                SizedBox(height: 16),
-
-                // Email
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Vui lòng nhập email';
-                    }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                      return 'Email không hợp lệ';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16),
-
-                // Username
-                TextFormField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    labelText: 'Tên đăng nhập',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.account_circle),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Vui lòng nhập tên đăng nhập';
-                    }
-                    if (value.length < 3) {
-                      return 'Tên đăng nhập phải có ít nhất 3 ký tự';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16),
-
-                // Password
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Mật khẩu',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Vui lòng nhập mật khẩu';
-                    }
-                    if (value.length < 5) {
-                      return 'Mật khẩu phải có ít nhất 5 ký tự';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 24),
-
-                // Nút đăng ký
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _registerUser,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? CircularProgressIndicator(color: Colors.white)
-                      : Text(
-                          'Đăng ký',
-                          style: TextStyle(fontSize: 16),
+        child: SafeArea(          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                children: [
+                  SizedBox(height: 20),
+                    // Compact Header
+                  _buildCompactHeader(isDark),
+                  
+                  SizedBox(height: 20),
+                  
+                  // Form container với glass morphism effect
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDark 
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.2),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 15,
+                          offset: Offset(0, 8),
                         ),
-                ),
-              ],
+                      ],
+                    ),                    child: Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            // Connection status
+                            _buildConnectionStatus(isDark),
+                            
+                            SizedBox(height: 16),
+                            
+                            // Full name field
+                            _buildTextField(
+                              controller: _fullNameController,
+                              hintText: 'Họ và tên',
+                              icon: Icons.person_outline,
+                              isDark: isDark,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Vui lòng nhập họ và tên';
+                                }
+                                return null;
+                              },
+                            ),
+                            
+                            SizedBox(height: 12),
+                              // Row with birth date and gender
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: _buildTextField(
+                                    controller: _birthDateController,
+                                    hintText: 'Ngày sinh',
+                                    icon: Icons.calendar_today_outlined,
+                                    isDark: isDark,
+                                    readOnly: true,
+                                    onTap: _selectDate,
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        Icons.date_range,
+                                        color: isDark ? Colors.white70 : Color(0xFF667eea),
+                                      ),
+                                      onPressed: _selectDate,
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Chọn ngày sinh';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  flex: 2,
+                                  child: _buildGenderDropdown(isDark),
+                                ),
+                              ],
+                            ),
+                            
+                            SizedBox(height: 12),
+                            
+                            // Email field
+                            _buildTextField(
+                              controller: _emailController,
+                              hintText: 'Email',
+                              icon: Icons.email_outlined,
+                              isDark: isDark,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Vui lòng nhập email';
+                                }
+                                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                                  return 'Email không hợp lệ';
+                                }
+                                return null;
+                              },
+                            ),
+                            
+                            SizedBox(height: 12),
+                            
+                            // Username field
+                            _buildTextField(
+                              controller: _usernameController,
+                              hintText: 'Tên đăng nhập',
+                              icon: Icons.account_circle_outlined,
+                              isDark: isDark,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Vui lòng nhập tên đăng nhập';
+                                }
+                                if (value.length < 3) {
+                                  return 'Tên đăng nhập phải có ít nhất 3 ký tự';
+                                }
+                                return null;
+                              },
+                            ),
+                            
+                            SizedBox(height: 12),
+                            
+                            // Password field
+                            _buildTextField(
+                              controller: _passwordController,
+                              hintText: 'Mật khẩu',
+                              icon: Icons.lock_outline,
+                              isDark: isDark,
+                              isPassword: true,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Vui lòng nhập mật khẩu';
+                                }
+                                if (value.length < 5) {
+                                  return 'Mật khẩu phải có ít nhất 5 ký tự';
+                                }
+                                return null;
+                              },
+                            ),
+                            
+                            SizedBox(height: 20),
+                            
+                            // Register button
+                            _buildRegisterButton(isDark),
+                            
+                            SizedBox(height: 16),
+                            
+                            // Divider
+                            _buildDivider(isDark),
+                            
+                            SizedBox(height: 16),
+                            
+                            // Login button
+                            _buildLoginButton(isDark),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  SizedBox(height: 20),
+                  
+                  // Theme toggle
+                  _buildThemeToggle(themeProvider, isDark),
+                  
+                  SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }  Widget _buildCompactHeader(bool isDark) {
+    return Column(
+      children: [
+        // Compact logo and title in row
+        Row(
+          children: [
+            // Smaller logo
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.3),
+                    Colors.white.withOpacity(0.1),
+                  ],
+                ),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.3),
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                Icons.person_add_rounded,
+                size: 30,
+                color: Colors.white,
+              ),
+            ),
+            
+            SizedBox(width: 16),
+            
+            // Title and subtitle
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tạo tài khoản',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Tham gia cùng HealthKeeper',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.8),
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConnectionStatus(bool isDark) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: _isConnected
+            ? Colors.green.withOpacity(0.1)
+            : Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _isConnected
+              ? Colors.green.withOpacity(0.3)
+              : Colors.red.withOpacity(0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _isConnected ? Colors.green : Colors.red,
+            ),
+          ),
+          SizedBox(width: 12),
+          Text(
+            _isConnected ? 'Đã kết nối' : 'Mất kết nối',
+            style: TextStyle(
+              color: _isConnected ? Colors.green : Colors.red,
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hintText,
+    required IconData icon,
+    required bool isDark,
+    bool isPassword = false,
+    bool readOnly = false,
+    VoidCallback? onTap,
+    Widget? suffixIcon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withOpacity(0.1)
+            : Colors.white.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.3),
+        ),
+      ),
+      child: TextFormField(
+        controller: controller,
+        obscureText: isPassword,
+        readOnly: readOnly,
+        onTap: onTap,
+        keyboardType: keyboardType,
+        style: TextStyle(
+          color: isDark ? Colors.white : Colors.black87,
+          fontSize: 16,
+        ),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: TextStyle(
+            color: isDark 
+                ? Colors.white.withOpacity(0.6)
+                : Colors.black.withOpacity(0.6),
+          ),
+          prefixIcon: Padding(
+            padding: EdgeInsets.all(16),
+            child: Icon(
+              icon,
+              color: isDark ? Colors.white70 : Color(0xFF667eea),
+              size: 24,
+            ),
+          ),
+          suffixIcon: suffixIcon,
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        ),
+        validator: validator,
+      ),
+    );
+  }
+  Widget _buildGenderDropdown(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withOpacity(0.1)
+            : Colors.white.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.3),
+        ),
+      ),
+      child: DropdownButtonFormField<String>(
+        value: _selectedGender,
+        style: TextStyle(
+          color: isDark ? Colors.white : Colors.black87,
+          fontSize: 14,
+        ),
+        dropdownColor: isDark ? Color(0xFF2D2D44) : Colors.white,
+        decoration: InputDecoration(
+          hintText: 'Giới tính',
+          hintStyle: TextStyle(
+            color: isDark 
+                ? Colors.white.withOpacity(0.6)
+                : Colors.black.withOpacity(0.6),
+            fontSize: 14,
+          ),
+          prefixIcon: Padding(
+            padding: EdgeInsets.all(12),
+            child: Icon(
+              Icons.wc_outlined,
+              color: isDark ? Colors.white70 : Color(0xFF667eea),
+              size: 20,
+            ),
+          ),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        ),
+        items: ['Nam', 'Nữ', 'Khác'].map((String value) {
+          return DropdownMenuItem<String>(
+            value: value,
+            child: Text(
+              value,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black87,
+                fontSize: 14,
+              ),
+            ),
+          );
+        }).toList(),
+        onChanged: (String? newValue) {
+          setState(() {
+            _selectedGender = newValue!;
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildRegisterButton(bool isDark) {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: _isLoading || !_isConnected
+              ? [Colors.grey, Colors.grey]
+              : [
+                  Color(0xFF667eea),
+                  Color(0xFF764ba2),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0xFF667eea).withOpacity(0.3),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: (_isLoading || !_isConnected) ? null : _registerUser,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: _isLoading
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'Đang đăng ký...',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              )
+            : Text(
+                'Đăng ký',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildDivider(bool isDark) {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  isDark 
+                      ? Colors.white.withOpacity(0.3)
+                      : Colors.black.withOpacity(0.3),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'hoặc',
+            style: TextStyle(
+              color: isDark 
+                  ? Colors.white.withOpacity(0.7)
+                  : Colors.black.withOpacity(0.7),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  isDark 
+                      ? Colors.white.withOpacity(0.3)
+                      : Colors.black.withOpacity(0.3),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoginButton(bool isDark) {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.3) : Color(0xFF667eea),
+          width: 2,
+        ),
+      ),
+      child: TextButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => LoginScreen(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return SlideTransition(
+                  position: animation.drive(
+                    Tween(begin: Offset(-1.0, 0.0), end: Offset.zero),
+                  ),
+                  child: child,
+                );
+              },
+            ),
+          );
+        },
+        style: TextButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Text(
+          'Đã có tài khoản? Đăng nhập',
+          style: TextStyle(
+            color: isDark ? Colors.white : Color(0xFF667eea),
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeToggle(ThemeProvider themeProvider, bool isDark) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.light_mode_outlined,
+            color: !isDark ? Colors.white : Colors.white.withOpacity(0.5),
+            size: 20,
+          ),
+          SizedBox(width: 8),
+          Switch(
+            value: isDark,
+            onChanged: (value) {
+              themeProvider.toggleTheme();
+            },
+            activeColor: Colors.white,
+            inactiveThumbColor: Colors.white.withOpacity(0.8),
+            activeTrackColor: Colors.white.withOpacity(0.3),
+            inactiveTrackColor: Colors.white.withOpacity(0.2),
+          ),
+          SizedBox(width: 8),
+          Icon(
+            Icons.dark_mode_outlined,
+            color: isDark ? Colors.white : Colors.white.withOpacity(0.5),
+            size: 20,
+          ),
+        ],
       ),
     );
   }

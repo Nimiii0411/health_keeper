@@ -6,6 +6,8 @@ import 'exercise_screen.dart';
 import 'reminder_screen.dart';
 import 'login_screen.dart';
 import '../providers/theme_provider.dart';
+import '../service/user_session.dart';
+import '../widgets/enhanced_home_content.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,9 +18,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  
-  List<Widget> get _screens => [
-    HomeContent(onNavigate: _navigateToScreen),
+    List<Widget> get _screens => [
+    EnhancedHomeContent(onNavigate: _navigateToScreen),
     AccountScreen(),
     DiaryScreen(),
     ExerciseScreen(),
@@ -50,8 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
+          children: [            DrawerHeader(
               decoration: BoxDecoration(
                 color: Colors.blue,
               ),
@@ -69,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   SizedBox(height: 10),
                   Text(
-                    'HealthKeeper',
+                    UserSession.getDisplayName(),
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -77,7 +77,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   Text(
-                    'Chào mừng bạn!',
+                    UserSession.getEmail().isNotEmpty 
+                        ? UserSession.getEmail()
+                        : 'Chào mừng bạn!',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 14,
@@ -183,8 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return AlertDialog(
           title: Text('Xác nhận đăng xuất'),
           content: Text('Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?'),
-          actions: [
-            TextButton(
+          actions: [            TextButton(
               child: Text('Hủy'),
               onPressed: () {
                 Navigator.of(context).pop();
@@ -193,17 +194,34 @@ class _HomeScreenState extends State<HomeScreen> {
             TextButton(
               child: Text('Đăng xuất'),
               onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
-                );
+                Navigator.of(context).pop(); // Close dialog first
+                _performLogout(context);
               },
             ),
           ],
         );
       },
     );
+  }
+
+  void _performLogout(BuildContext context) async {
+    try {
+      // Clear user session
+      UserSession.logout();
+      
+      // Navigate to login screen and clear the entire navigation stack
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/login',
+        (Route<dynamic> route) => false,
+      );
+    } catch (e) {
+      print('❌ Lỗi khi đăng xuất: $e');
+      // Fallback: force navigate to login
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+        (Route<dynamic> route) => false,
+      );
+    }
   }
 }
 
