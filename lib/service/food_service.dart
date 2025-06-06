@@ -343,11 +343,11 @@ class FoodService {
         return;
       }
 
-      var collections = await DatabaseConnection.database!.listCollections();
-      print('📋 Danh sách collections:');
-      // for (var collection in collections) {
-      //   print('  - ${collection['name']}');
-      // }
+      // var collections = await DatabaseConnection.database!.listCollections();
+      // print('📋 Danh sách collections:');
+      // // for (var collection in collections) {
+      // //   print('  - ${collection['name']}');
+      // // }
     } catch (e) {
       print('❌ Lỗi khi list collections: $e');
     }
