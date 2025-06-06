@@ -17,6 +17,7 @@ class EnhancedHomeContent extends StatefulWidget {
 
 class _EnhancedHomeContentState extends State<EnhancedHomeContent> {
   HealthDiary? todayHealthData;
+  HealthDiary? latestHealthData; // Thêm dữ liệu sức khỏe mới nhất
   int todayCaloriesConsumed = 0;
   int todayCaloriesBurned = 0;
   int activeReminders = 0;
@@ -28,16 +29,44 @@ class _EnhancedHomeContentState extends State<EnhancedHomeContent> {
     _loadTodayData();
   }
 
+  // Helper method để parse ngày từ string
+  DateTime _parseDate(String dateStr) {
+    try {
+      // Format: dd/MM/yyyy
+      List<String> parts = dateStr.split('/');
+      if (parts.length == 3) {
+        int day = int.parse(parts[0]);
+        int month = int.parse(parts[1]);
+        int year = int.parse(parts[2]);
+        return DateTime(year, month, day);
+      }
+    } catch (e) {
+      print('❌ Lỗi parse date: $e');
+    }
+    return DateTime.now(); // Fallback
+  }
+
   Future<void> _loadTodayData() async {
     if (!UserSession.hasAccess()) return;
 
     final userId = UserSession.currentUserId!;
     final today = DateTime.now();
-    final todayStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
-
-    try {
+    final todayStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";    try {
       // Load today's health diary
       final healthDiary = await HealthDiaryService.getHealthDiaryByDate(userId, todayStr);
+      
+      // Load latest health data (cân nặng và chiều cao mới nhất)
+      final userHealthHistory = await HealthDiaryService.getUserHealthDiary(userId);
+      HealthDiary? latestHealth;
+      if (userHealthHistory.isNotEmpty) {
+        // Sắp xếp theo ngày mới nhất
+        userHealthHistory.sort((a, b) {
+          DateTime dateA = _parseDate(a.entryDate);
+          DateTime dateB = _parseDate(b.entryDate);
+          return dateB.compareTo(dateA);
+        });
+        latestHealth = userHealthHistory.first;
+      }
       
       // Load today's calories consumed
       final caloriesConsumed = await FoodService.getTotalCaloriesForDate(userId, todayStr);
@@ -50,6 +79,7 @@ class _EnhancedHomeContentState extends State<EnhancedHomeContent> {
 
       setState(() {
         todayHealthData = healthDiary;
+        latestHealthData = latestHealth;
         todayCaloriesConsumed = caloriesConsumed;
         todayCaloriesBurned = caloriesBurned;
         activeReminders = reminders.length;
@@ -136,8 +166,10 @@ class _EnhancedHomeContentState extends State<EnhancedHomeContent> {
       ),
     );
   }
-
   Widget _buildTodaySummary() {
+    // Sử dụng dữ liệu mới nhất cho cân nặng, chiều cao và BMI
+    final displayData = latestHealthData ?? todayHealthData;
+    
     return Column(
       children: [
         Row(
@@ -145,7 +177,7 @@ class _EnhancedHomeContentState extends State<EnhancedHomeContent> {
             Expanded(
               child: _buildSummaryCard(
                 'Cân nặng',
-                todayHealthData?.weight.toString() ?? '--',
+                displayData?.weight.toString() ?? '--',
                 'kg',
                 Icons.monitor_weight,
                 Colors.blue,
@@ -154,11 +186,35 @@ class _EnhancedHomeContentState extends State<EnhancedHomeContent> {
             SizedBox(width: 12),
             Expanded(
               child: _buildSummaryCard(
+                'Chiều cao',
+                displayData?.height.toString() ?? '--',
+                'cm',
+                Icons.height,
+                Colors.green,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildSummaryCard(
                 'BMI',
-                todayHealthData?.bmi?.toStringAsFixed(1) ?? '--',
-                todayHealthData?.bmiLabel ?? '',
+                displayData?.bmi?.toStringAsFixed(1) ?? '--',
+                displayData?.bmiLabel ?? '',
                 Icons.analytics,
-                _getBMIColor(todayHealthData?.bmiLabel),
+                _getBMIColor(displayData?.bmiLabel),
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: _buildSummaryCard(
+                'Ngày cập nhật',
+                displayData?.entryDate ?? '--',
+                '',
+                Icons.calendar_today,
+                Colors.purple,
               ),
             ),
           ],

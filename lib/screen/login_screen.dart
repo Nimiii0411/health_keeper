@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 import '../database/mongodb_service.dart';
 import '../service/user_service.dart';
 import '../service/user_session.dart';
+import '../service/health_diary_service.dart';
 import '../models/user_model.dart';
 import '../providers/theme_provider.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
+import 'initial_health_data_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -98,10 +100,75 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.clear();
   }
 // Hiển thị dialog thành công
-  void _showSuccessDialog(User user) {
+  void _showSuccessDialog(User user) async {
     // Lưu user session
     UserSession.login(user);
     
+    // Kiểm tra xem user có dữ liệu sức khỏe hay không
+    bool hasHealthData = await HealthDiaryService.hasHealthData(user.idUser);
+    
+    if (!hasHealthData) {
+      // Nếu chưa có dữ liệu sức khỏe, hiển thị dialog yêu cầu nhập dữ liệu
+      _showHealthDataRequiredDialog(user);
+    } else {
+      // Nếu đã có dữ liệu, hiển thị dialog thành công bình thường
+      _showNormalSuccessDialog(user);
+    }
+  }
+
+  // Hiển thị dialog yêu cầu nhập dữ liệu sức khỏe
+  void _showHealthDataRequiredDialog(User user) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Không cho phép đóng dialog bằng cách tap ngoài
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.health_and_safety, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Hoàn tất hồ sơ'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Chào mừng ${user.fullName}!'),
+              SizedBox(height: 12),
+              Text(
+                'Để bắt đầu theo dõi sức khỏe, bạn cần nhập một số thông tin cơ bản về chiều cao và cân nặng.',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Điều này sẽ giúp chúng tôi tính toán BMI và đưa ra các khuyến nghị phù hợp.',
+                style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Điều hướng đến InitialHealthDataScreen
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => InitialHealthDataScreen(),
+                  ),
+                );
+              },
+              child: Text('Tiếp tục'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Hiển thị dialog thành công bình thường
+  void _showNormalSuccessDialog(User user) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -126,7 +193,8 @@ class _LoginScreenState extends State<LoginScreen> {
               Text('Username: ${user.username}'),
               Text('Email: ${user.email}'),
             ],
-          ),actions: [
+          ),
+          actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();

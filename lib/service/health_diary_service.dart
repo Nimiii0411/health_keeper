@@ -134,6 +134,19 @@ class HealthDiaryService {
       return false;
     }
   }
+  // Kiểm tra xem user có dữ liệu sức khỏe hay không
+  static Future<bool> hasHealthData(int userId) async {
+    try {
+      var collection = _collection;
+      if (collection == null) return false;
+
+      var count = await collection.count(where.eq('user_id', userId));
+      return count > 0;
+    } catch (e) {
+      print('❌ Lỗi khi kiểm tra health data: $e');
+      return false;
+    }
+  }
 
   // Lấy BMI catalog
   static Future<List<BMICatalog>> getBMICatalog() async {
