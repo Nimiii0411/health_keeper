@@ -101,8 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = false;
       });
     }
-  }
-  void _showAdminSuccessDialog() {
+  }  void _showAdminSuccessDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -111,7 +110,12 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               Icon(Icons.admin_panel_settings, color: Colors.purple),
               SizedBox(width: 8),
-              Text('Đăng nhập Admin thành công!'),
+              Expanded(
+                child: Text(
+                  'Đăng nhập Admin thành công!',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
             ],
           ),
           content: Column(
@@ -124,6 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 'Bạn đã đăng nhập với quyền quản trị viên.',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
+              SizedBox(height: 4),
               Text('Truy cập vào bảng điều khiển admin...'),
             ],
           ),
