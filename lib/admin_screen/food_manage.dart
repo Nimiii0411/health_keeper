@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import '../models/food_model.dart';
 import '../database/mongodb_service.dart';
 
 class FoodManageScreen extends StatefulWidget {
+  const FoodManageScreen({Key? key}) : super(key: key);
+
   @override
   _FoodManageScreenState createState() => _FoodManageScreenState();
 }
@@ -11,8 +12,11 @@ class FoodManageScreen extends StatefulWidget {
 class _FoodManageScreenState extends State<FoodManageScreen> {
   List<Food> foods = [];
   bool isLoading = true;
+  String loadingMessage = 'Đang tải dữ liệu...';
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   List<Food> filteredFoods = [];
+  String selectedMealTypeFilter = 'Tất cả';
 
   @override
   void initState() {
@@ -20,16 +24,27 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
     _loadFoods();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadFoods() async {
     try {
-      setState(() => isLoading = true);
+      setState(() {
+        isLoading = true;
+        foods.clear();
+        loadingMessage = 'Đang kiểm tra kết nối...';
+      });
       
-      // Debug: Kiểm tra kết nối database
+      // Kiểm tra kết nối database
       if (!DatabaseConnection.isConnected) {
         print('❌ Database chưa kết nối');
+        setState(() => loadingMessage = 'Đang kết nối database...');
         _showSnackBar('Database chưa kết nối. Đang thử kết nối lại...');
         
-        // Thử kết nối lại
         try {
           await DatabaseConnection.connect();
           print('✅ Kết nối lại thành công');
@@ -39,73 +54,55 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
         }
       }
 
-      print('🔍 Đang tải dữ liệu foods...');
+      setState(() => loadingMessage = 'Đang truy vấn dữ liệu...');
+      print('🔍 Đang tải toàn bộ dữ liệu foods...');
       
-      // Thử với các tên collection khác nhau
-      List<String> possibleCollectionNames = [
-        'foods',
-        'foods_catalog', 
-        'food',
-        'Food',
-        'thucpham'
-      ];
-
-      mongo.DbCollection? collection;
-      String? workingCollectionName;
-
-      // Tìm collection tồn tại
-      for (String collectionName in possibleCollectionNames) {
-        try {
-          collection = DatabaseConnection.getCollection(collectionName);
-          if (collection != null) {
-            var count = await collection.count();
-            print('📊 Collection "$collectionName" có $count documents');
-            if (count >= 0) { // Thay đổi từ > 0 thành >= 0 để chấp nhận collection rỗng
-              workingCollectionName = collectionName;
-              break;
-            }
-          }
-        } catch (e) {
-          print('❌ Lỗi kiểm tra collection "$collectionName": $e');
-          continue;
-        }
-      }
-
+      // Sử dụng collection foods để đồng bộ với CRUD operations
+      final collection = DatabaseConnection.getCollection('foods_catalog');
       if (collection == null) {
-        print('❌ Không tìm thấy collection foods');
-        _showSnackBar('Không tìm thấy collection foods. Sẽ tạo mới khi thêm dữ liệu.');
-        // Tạo collection mặc định
-        collection = DatabaseConnection.getCollection('foods');
-        workingCollectionName = 'foods';
+        throw Exception('Không thể truy cập collection foods');
       }
 
-      print('✅ Sử dụng collection: $workingCollectionName');
-
-      // Lấy dữ liệu
-      final result = await collection!.find().toList();
+      // Tải toàn bộ dữ liệu cùng một lúc
+      final result = await collection.find().toList();
+      
       print('📋 Lấy được ${result.length} documents');
 
       if (result.isNotEmpty) {
-        print('🔍 Dữ liệu mẫu: ${result.first}');
+        setState(() => loadingMessage = 'Đang xử lý dữ liệu...');
         
-        foods = [];
+        List<Food> newFoods = [];
+        int processed = 0;
+        int total = result.length;
+        
         for (var data in result) {
           try {
             var food = Food.fromMap(data);
-            foods.add(food);
+            newFoods.add(food);
+            processed++;
+            
+            // Cập nhật UI mỗi 50 items để hiển thị progress
+            if (processed % 50 == 0 && mounted) {
+              setState(() {
+                loadingMessage = 'Đã xử lý $processed/$total thực phẩm...';
+              });
+              await Future.delayed(Duration(milliseconds: 1)); // Cho UI breathe
+            }
           } catch (e) {
             print('❌ Lỗi parse food: $e');
             print('📄 Data: $data');
           }
         }
 
-        filteredFoods = foods;
-        print('✅ Parse thành công ${foods.length} foods');
+        // Gán dữ liệu mới
+        foods = newFoods;
+        
+        setState(() => loadingMessage = 'Đang áp dụng bộ lọc...');
+        _applyFilters();
+        print('✅ Parse thành công ${newFoods.length} foods');
       } else {
         print('📭 Collection rỗng hoặc chưa có dữ liệu');
-        foods = [];
         filteredFoods = [];
-        _showSnackBar('Chưa có dữ liệu. Hãy thêm thực phẩm mới.');
       }
 
     } catch (e) {
@@ -115,21 +112,31 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
       filteredFoods = [];
     } finally {
       if (mounted) {
-        setState(() => isLoading = false);
+        setState(() {
+          isLoading = false;
+          loadingMessage = 'Đang tải dữ liệu...';
+        });
       }
     }
   }
 
-  void _filterFoods(String query) {
+  void _applyFilters() {
     setState(() {
-      if (query.isEmpty) {
-        filteredFoods = foods;
-      } else {
-        filteredFoods = foods.where((food) =>
-          food.foodName.toLowerCase().contains(query.toLowerCase()) ||
-          food.mealType.toLowerCase().contains(query.toLowerCase())
-        ).toList();
-      }
+      filteredFoods = foods.where((food) {
+        // Lọc theo loại bữa ăn
+        bool matchesMealType = selectedMealTypeFilter == 'Tất cả' || 
+                              food.mealType == selectedMealTypeFilter;
+        
+        // Lọc theo từ khóa tìm kiếm
+        bool matchesSearch = _searchController.text.isEmpty ||
+                           food.foodName.toLowerCase().contains(_searchController.text.toLowerCase()) ||
+                           food.mealType.toLowerCase().contains(_searchController.text.toLowerCase());
+        
+        return matchesMealType && matchesSearch;
+      }).toList();
+
+      // Sắp xếp theo tên
+      filteredFoods.sort((a, b) => a.foodName.compareTo(b.foodName));
     });
   }
 
@@ -137,11 +144,18 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
     final confirm = await _showConfirmDialog('Xóa thực phẩm', 'Bạn có chắc muốn xóa ${food.foodName}?');
     if (confirm) {
       try {
-        final collection = DatabaseConnection.getCollection('foods');
-        await collection?.deleteOne({'_id': food.id});
+        final collection = DatabaseConnection.getCollection('foods_catalog');
+        if (collection == null) {
+          _showSnackBar('Lỗi: Không thể truy cập database');
+          return;
+        }
+        
+        // Sử dụng ObjectId để xóa
+        await collection.deleteOne({'_id': food.id});
         _showSnackBar('Đã xóa thực phẩm thành công');
-        _loadFoods();
+        _loadFoods(); // Reload để cập nhật danh sách
       } catch (e) {
+        print('❌ Lỗi xóa thực phẩm: $e');
         _showSnackBar('Lỗi xóa thực phẩm: $e');
       }
     }
@@ -164,7 +178,17 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(isEdit ? 'Sửa thực phẩm' : 'Thêm thực phẩm'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              isEdit ? Icons.edit : Icons.add,
+              color: Colors.green,
+            ),
+            SizedBox(width: 8),
+            Text(isEdit ? 'Sửa thực phẩm' : 'Thêm thực phẩm'),
+          ],
+        ),
         content: Container(
           width: double.maxFinite,
           child: SingleChildScrollView(
@@ -365,7 +389,12 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
               }
 
               try {
-                final collection = DatabaseConnection.getCollection('foods');
+                final collection = DatabaseConnection.getCollection('foods_catalog');
+                if (collection == null) {
+                  _showSnackBar('Lỗi: Không thể truy cập database');
+                  return;
+                }
+                
                 final foodData = {
                   'food_name': foodNameController.text.trim(),
                   'meal_type': selectedMealType,
@@ -378,21 +407,21 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
                   'carbs': int.tryParse(carbsController.text) ?? 0,
                   'bmi_id': int.tryParse(bmiIdController.text) ?? 0,
                   'image': imageController.text.trim().isEmpty ? null : imageController.text.trim(),
-                };
-
-                if (isEdit) {
-                  await collection?.updateOne(
-                    {'_id': food!.id},
+                };                if (isEdit) {
+                  // Cập nhật thực phẩm
+                  await collection.updateOne(
+                    {'_id': food.id},
                     {'\$set': foodData}
                   );
                   _showSnackBar('Cập nhật thành công');
                 } else {
-                  await collection?.insertOne(foodData);
+                  // Thêm thực phẩm mới
+                  await collection.insertOne(foodData);
                   _showSnackBar('Thêm thực phẩm thành công');
                 }
 
                 Navigator.pop(context);
-                _loadFoods();
+                _loadFoods(); // Reload để cập nhật danh sách
               } catch (e) {
                 print('❌ Lỗi lưu food: $e');
                 _showSnackBar('Lỗi: $e');
@@ -448,14 +477,46 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Quản lý thực phẩm'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.green.shade600,
+                Colors.green.shade800,
+                Colors.teal.shade700,
+              ],
+            ),
+          ),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.restaurant_menu, color: Colors.white),
+            SizedBox(width: 8),
+            Text(
+              'Quản lý thực phẩm',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: _loadFoods,
-            tooltip: 'Tải lại dữ liệu',
+          Container(
+            margin: EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: IconButton(
+              icon: Icon(Icons.refresh, color: Colors.white),
+              onPressed: _loadFoods,
+              tooltip: 'Tải lại dữ liệu',
+            ),
           ),
         ],
       ),
@@ -463,49 +524,140 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
         children: [
           // Debug info bar
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Colors.grey[100],
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.grey[100]!, Colors.grey[50]!],
+              ),
+              border: Border(
+                bottom: BorderSide(color: Colors.grey[300]!, width: 1),
+              ),
+            ),
             child: Row(
               children: [
-                Icon(
-                  DatabaseConnection.isConnected ? Icons.cloud_done : Icons.cloud_off,
-                  color: DatabaseConnection.isConnected ? Colors.green : Colors.red,
-                  size: 16,
-                ),
-                SizedBox(width: 8),
-                Text(
-                  'DB: ${DatabaseConnection.isConnected ? "Kết nối" : "Mất kết nối"}',
-                  style: TextStyle(fontSize: 12),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: DatabaseConnection.isConnected ? Colors.green[100] : Colors.red[100],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: DatabaseConnection.isConnected ? Colors.green : Colors.red,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        DatabaseConnection.isConnected ? Icons.cloud_done : Icons.cloud_off,
+                        color: DatabaseConnection.isConnected ? Colors.green : Colors.red,
+                        size: 16,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        DatabaseConnection.isConnected ? "Kết nối" : "Mất kết nối",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: DatabaseConnection.isConnected ? Colors.green[800] : Colors.red[800],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 SizedBox(width: 16),
-                Text(
-                  'Thực phẩm: ${foods.length}',
-                  style: TextStyle(fontSize: 12),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[100],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.restaurant_menu, color: Colors.blue, size: 16),
+                      SizedBox(width: 4),
+                      Text(
+                        '${foods.length} thực phẩm',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue[800],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 Spacer(),
                 if (isLoading)
                   SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                    ),
                   ),
               ],
             ),
           ),
           
-          // Search field
-          Padding(
+          // Search and filter section
+          Container(
             padding: EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                labelText: 'Tìm kiếm thực phẩm',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-                filled: true,
-                fillColor: Colors.grey[50],
-              ),
-              onChanged: _filterFoods,
+            color: Colors.grey[50],
+            child: Column(
+              children: [
+                // Search field
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    labelText: 'Tìm kiếm thực phẩm',
+                    prefixIcon: Icon(Icons.search, color: Colors.green),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  onChanged: (value) => _applyFilters(),
+                ),
+                
+                SizedBox(height: 12),
+                
+                // Meal type filter
+                Row(
+                  children: [
+                    Text(
+                      'Lọc theo bữa ăn: ',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: selectedMealTypeFilter,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        items: ['Tất cả', 'Sáng', 'Trưa', 'Tối', 'Snack'].map((type) => 
+                          DropdownMenuItem(value: type, child: Text(type))
+                        ).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedMealTypeFilter = value!;
+                            _applyFilters();
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
           
@@ -516,9 +668,48 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircularProgressIndicator(color: Colors.green),
-                        SizedBox(height: 16),
-                        Text('Đang tải dữ liệu...'),
+                        Container(
+                          padding: EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.2),
+                                spreadRadius: 2,
+                                blurRadius: 5,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(
+                                color: Colors.green,
+                                strokeWidth: 3,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                loadingMessage,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Vui lòng đợi...',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   )
@@ -547,46 +738,164 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
                         ),
                       )
                     : ListView.builder(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        controller: _scrollController,
+                        padding: EdgeInsets.all(16),
                         itemCount: filteredFoods.length,
                         itemBuilder: (context, index) {
                           final food = filteredFoods[index];
-                          return Card(
-                            margin: EdgeInsets.only(bottom: 8),
-                            elevation: 2,
+                          return Container(
+                            margin: EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  spreadRadius: 0,
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
                             child: ListTile(
-                              leading: CircleAvatar(
-                                child: Text('🍎'),
-                                backgroundColor: Colors.green[100],
+                              contentPadding: EdgeInsets.all(16),
+                              leading: Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: _getMealTypeColor(food.mealType).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: _getMealTypeColor(food.mealType).withOpacity(0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: food.image != null && food.image!.isNotEmpty
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(11),
+                                        child: Image.network(
+                                          food.image!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Icon(
+                                              Icons.restaurant_menu,
+                                              color: _getMealTypeColor(food.mealType),
+                                              size: 24,
+                                            );
+                                          },
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.restaurant_menu,
+                                        color: _getMealTypeColor(food.mealType),
+                                        size: 24,
+                                      ),
                               ),
                               title: Text(
                                 food.foodName,
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SizedBox(height: 4),
-                                  Text('Loại: ${food.mealType}'),
-                                  Text('Calories: ${food.calories} cal'),
-                                  Text('Khẩu phần: ${food.servingSize} ${food.servingUnit}'),
-                                  Text('P: ${food.protein}g | F: ${food.fat}g | C: ${food.carbs}g'),
-                                ],
+                              subtitle: Padding(
+                                padding: EdgeInsets.only(top: 8),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: _getMealTypeColor(food.mealType).withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: _getMealTypeColor(food.mealType),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            food.mealType,
+                                            style: TextStyle(
+                                              color: _getMealTypeColor(food.mealType),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: 8),
+                                        Flexible(
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.local_fire_department, 
+                                                color: Colors.orange, size: 16),
+                                              Text(' ${food.calories} cal',
+                                                style: TextStyle(color: Colors.orange[700], fontWeight: FontWeight.w500)),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 6),
+                                    Text('Khẩu phần: ${food.servingSize} ${food.servingUnit}',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    SizedBox(height: 4),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 2,
+                                      children: [
+                                        _buildNutrientTag('P', '${food.protein}g', Colors.blue),
+                                        _buildNutrientTag('F', '${food.fat}g', Colors.red),
+                                        _buildNutrientTag('C', '${food.carbs}g', Colors.green),
+                                        _buildNutrientTag('Fiber', '${food.fiber}g', Colors.purple),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(Icons.edit, color: Colors.orange),
-                                    onPressed: () => _showFoodDialog(food: food),
-                                    tooltip: 'Chỉnh sửa',
-                                  ),
-                                  IconButton(
-                                    icon: Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () => _deleteFood(food),
-                                    tooltip: 'Xóa',
-                                  ),
-                                ],
+                              trailing: SizedBox(
+                                width: 88,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange[100],
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: IconButton(
+                                        padding: EdgeInsets.zero,
+                                        icon: Icon(Icons.edit, color: Colors.orange[700], size: 18),
+                                        onPressed: () => _showFoodDialog(food: food),
+                                        tooltip: 'Chỉnh sửa',
+                                      ),
+                                    ),
+                                    SizedBox(width: 6),
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: Colors.red[100],
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: IconButton(
+                                        padding: EdgeInsets.zero,
+                                        icon: Icon(Icons.delete, color: Colors.red[700], size: 18),
+                                        onPressed: () => _deleteFood(food),
+                                        tooltip: 'Xóa',
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           );
@@ -598,9 +907,44 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showFoodDialog(),
         icon: Icon(Icons.add),
-        label: Text('Thêm'),
+        label: Text('Thêm thực phẩm'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
+        elevation: 8,
+      ),
+    );
+  }
+
+  Color _getMealTypeColor(String mealType) {
+    switch (mealType) {
+      case 'Sáng':
+        return Colors.orange;
+      case 'Trưa':
+        return Colors.blue;
+      case 'Tối':
+        return Colors.indigo;
+      case 'Snack':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget _buildNutrientTag(String label, String value, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withOpacity(0.3), width: 0.5),
+      ),
+      child: Text(
+        '$label: $value',
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
