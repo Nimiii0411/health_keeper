@@ -4,6 +4,7 @@ import 'screen/login_screen.dart';
 import 'screen/home_screen.dart';
 import 'providers/theme_provider.dart';
 import 'service/notification_service.dart';
+import 'database/mongodb_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,6 +13,16 @@ void main() async {
   await NotificationService.initialize();
   await NotificationService.createNotificationChannel();
   await NotificationService.requestPermissions();
+  
+  // Khởi tạo database connection
+  try {
+    print('🔌 Đang khởi tạo kết nối database...');
+    await DatabaseConnection.connect();
+    print('✅ Database đã sẵn sàng!');
+  } catch (e) {
+    print('⚠️ Lỗi kết nối database trong main: $e');
+    print('📱 App sẽ khởi chạy nhưng cần kết nối lại trong các màn hình');
+  }
   
   runApp(MyApp());
 }
