@@ -7,6 +7,7 @@ import '../service/user_session.dart';
 import '../service/health_diary_service.dart';
 import '../models/user_model.dart';
 import '../providers/theme_provider.dart';
+import '../admin_screen/overview.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
 import 'initial_health_data_screen.dart';
@@ -77,6 +78,14 @@ class _LoginScreenState extends State<LoginScreen> {
       String username = _usernameController.text.trim();
       String password = _passwordController.text;
 
+      // Kiểm tra tài khoản admin trước
+      if (username == 'duchuy123' && password == 'duchuy123') {
+        _showAdminSuccessDialog();
+        _clearForm();
+        return;
+      }
+
+      // Nếu không phải admin, kiểm tra user thường
       User? user = await UserService.loginUser(username, password);
 
       if (user != null) {
@@ -93,7 +102,48 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     }
   }
-
+  void _showAdminSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.admin_panel_settings, color: Colors.purple),
+              SizedBox(width: 8),
+              Text('Đăng nhập Admin thành công!'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Chào mừng Administrator!'),
+              SizedBox(height: 8),
+              Text(
+                'Bạn đã đăng nhập với quyền quản trị viên.',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text('Truy cập vào bảng điều khiển admin...'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Navigate to admin dashboard
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => AdminDashboard()),
+                );
+              },
+              child: Text('Vào Admin Panel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
   // Xóa form
   void _clearForm() {
     _usernameController.clear();
