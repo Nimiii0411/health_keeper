@@ -8,7 +8,7 @@ class DatabaseConnection {
 
   // MongoDB Atlas connection string
   static const String _connectionString =
-      'mongodb+srv://Nimiii:tmnt14121@healthapp.nt16qqk.mongodb.net/Healthkeeper?retryWrites=true&w=majority&appName=HealthApp';
+      'mongodb+srv://KunN21:0909244231@healthapp.nt16qqk.mongodb.net/Healthkeeper?retryWrites=true&w=majority&appName=HealthApp';
 
   // Getter để các service khác sử dụng
   static Db? get database => _db;
@@ -21,7 +21,7 @@ class DatabaseConnection {
       return;
     }
 
-    int maxRetries = 3;
+    int maxRetries = 10;
     int currentRetry = 0;
 
     while (currentRetry < maxRetries) {
