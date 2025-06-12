@@ -3,7 +3,10 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../service/health_diary_service.dart';
 import '../service/user_session.dart';
+import '../service/meal_plan_service.dart';
 import '../models/health_diary_model.dart';
+import '../models/daily_meal_model.dart';
+import 'food_screen.dart';
 
 class DiaryScreen extends StatefulWidget {
   const DiaryScreen({super.key});
@@ -172,8 +175,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
       ),
       floatingActionButton: !hasTodayEntry ? FloatingActionButton(
         onPressed: () => _showAddEntryDialog(),
-        child: Icon(Icons.add),
         tooltip: 'Thêm nhật ký hôm nay',
+        child: Icon(Icons.add),
       ) : null,
     );
   }
@@ -584,8 +587,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
                   ],
                 ),
               ),
-              
-              // Ghi chú nếu có
+                // Ghi chú nếu có
               if (entry.content != null && entry.content!.isNotEmpty) ...[
                 SizedBox(height: 12),
                 Container(
@@ -628,6 +630,10 @@ class _DiaryScreenState extends State<DiaryScreen> {
                   ),
                 ),
               ],
+              
+              // Meal Plan Section
+              SizedBox(height: 12),
+              _buildMealPlanSection(entry, isDark),
             ],
           ),
         ),
@@ -667,6 +673,326 @@ class _DiaryScreenState extends State<DiaryScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Widget để hiển thị meal plan cho mỗi diary entry
+  Widget _buildMealPlanSection(HealthDiary entry, bool isDark) {
+    return FutureBuilder<DailyMeal?>(
+      future: _getMealPlanForDate(entry.entryDate),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey.shade700 : Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isDark ? Colors.grey.shade600 : Colors.orange.shade200,
+              ),
+            ),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isDark ? Colors.orange.shade300 : Colors.orange
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Đang tải thực đơn...',
+                  style: TextStyle(
+                    color: isDark ? Colors.orange.shade300 : Colors.orange.shade700,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (snapshot.hasData && snapshot.data != null) {
+          return _buildMealPlanInfo(snapshot.data!, isDark);
+        } else {
+          return _buildNoMealPlan(entry.entryDate, isDark);
+        }
+      },
+    );
+  }
+
+  // Widget hiển thị thông tin meal plan
+  Widget _buildMealPlanInfo(DailyMeal mealPlan, bool isDark) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey.shade700 : Colors.green.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade600 : Colors.green.shade200,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.restaurant_menu,
+                size: 16,
+                color: isDark ? Colors.green.shade300 : Colors.green.shade700,
+              ),
+              SizedBox(width: 6),
+              Text(
+                'Thực đơn',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.green.shade300 : Colors.green.shade700,
+                  fontSize: 14,
+                ),
+              ),
+              Spacer(),
+              if (mealPlan.isCompleted)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Hoàn thành',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildNutritionSummaryItem(
+                  'Calories',
+                  mealPlan.totalCalories.toStringAsFixed(0),
+                  'kcal',
+                  Colors.orange,
+                  isDark,
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: _buildNutritionSummaryItem(
+                  'Protein',
+                  mealPlan.totalProtein.toStringAsFixed(1),
+                  'g',
+                  Colors.red,
+                  isDark,
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: _buildNutritionSummaryItem(
+                  'Carbs',
+                  mealPlan.totalCarbs.toStringAsFixed(1),
+                  'g',
+                  Colors.blue,
+                  isDark,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _viewMealPlanDetails(mealPlan),
+                  icon: Icon(Icons.visibility, size: 16),
+                  label: Text('Xem chi tiết', style: TextStyle(fontSize: 12)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark ? Colors.green.shade600 : Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    minimumSize: Size(0, 32),
+                  ),
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _editMealPlan(mealPlan),
+                  icon: Icon(Icons.edit, size: 16),
+                  label: Text('Chỉnh sửa', style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? Colors.green.shade300 : Colors.green,
+                    side: BorderSide(
+                      color: isDark ? Colors.green.shade300 : Colors.green,
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    minimumSize: Size(0, 32),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget khi chưa có meal plan
+  Widget _buildNoMealPlan(String date, bool isDark) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey.shade700 : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade600 : Colors.grey.shade300,
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.restaurant_menu,
+                size: 16,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
+              SizedBox(width: 6),
+              Text(
+                'Thực đơn',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Chưa có thực đơn cho ngày này',
+            style: TextStyle(
+              color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
+              fontSize: 12,
+            ),
+          ),
+          SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _createMealPlanForDate(date),
+              icon: Icon(Icons.add, size: 16),
+              label: Text('Tạo thực đơn', style: TextStyle(fontSize: 12)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark ? Colors.blue.shade600 : Colors.blue,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 8),
+                minimumSize: Size(0, 32),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget hiển thị thông tin dinh dưỡng nhỏ
+  Widget _buildNutritionSummaryItem(String label, String value, String unit, Color color, bool isDark) {
+    return Container(
+      padding: EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          SizedBox(height: 2),
+          RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: value,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                TextSpan(
+                  text: ' $unit',
+                  style: TextStyle(
+                    color: color.withOpacity(0.7),
+                    fontSize: 8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }  // Method để lấy meal plan cho ngày cụ thể
+  Future<DailyMeal?> _getMealPlanForDate(String date) async {    if (!UserSession.hasAccess()) return null;
+    
+    try {
+      final userId = UserSession.currentUserId!;
+      return await MealPlanService.getDailyMealByUserId(userId, date);
+    } catch (e) {
+      print('❌ Lỗi khi lấy meal plan: $e');
+      return null;
+    }
+  }
+  // Method để xem chi tiết meal plan
+  void _viewMealPlanDetails(DailyMeal mealPlan) {
+    // Parse the meal plan date to DateTime
+    DateTime mealDate = _parseDate(mealPlan.date);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FoodScreen(initialDate: mealDate),
+      ),
+    );
+  }
+
+  // Method để chỉnh sửa meal plan
+  void _editMealPlan(DailyMeal mealPlan) {
+    // Parse the meal plan date to DateTime
+    DateTime mealDate = _parseDate(mealPlan.date);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FoodScreen(initialDate: mealDate),
+      ),
+    );
+  }
+
+  // Method để tạo meal plan cho ngày cụ thể
+  void _createMealPlanForDate(String date) {
+    // Parse the date string to DateTime
+    DateTime targetDate = _parseDate(date);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FoodScreen(initialDate: targetDate),
       ),
     );
   }

@@ -47,7 +47,7 @@ class MealDaily {
 
 class FoodService {
   static const String _foodsCatalogCollectionName = 'foods_catalog';
-  static const String _mealDailyCollectionName = 'meal_daily';
+  static const String _mealDailyCollectionName = 'daily_meals';
 
   static mongo.DbCollection? get _foodsCatalogCollection =>
       DatabaseConnection.getCollection(_foodsCatalogCollectionName);

@@ -161,4 +161,30 @@ class HealthDiaryService {
       return [];
     }
   }
+
+  // Lấy health diary mới nhất của user
+  static Future<HealthDiary?> getLatestHealthDiary(int userId) async {
+    try {
+      var collection = _collection;
+      if (collection == null) return null;
+
+      var result = await collection
+          .find(where.eq('user_id', userId))
+          .toList();
+
+      if (result.isEmpty) return null;
+
+      // Sort by date và lấy entry mới nhất
+      result.sort((a, b) {
+        DateTime dateA = DateTime.parse(a['entry_date'].split('/').reversed.join('-'));
+        DateTime dateB = DateTime.parse(b['entry_date'].split('/').reversed.join('-'));
+        return dateB.compareTo(dateA);
+      });
+
+      return HealthDiary.fromMap(result.first);
+    } catch (e) {
+      print('❌ Lỗi khi lấy latest health diary: $e');
+      return null;
+    }
+  }
 }

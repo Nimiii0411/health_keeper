@@ -4,6 +4,8 @@ import '../models/user_model.dart';
 import '../database/mongodb_service.dart';
 
 class UserManageScreen extends StatefulWidget {
+  const UserManageScreen({super.key});
+
   @override
   _UserManageScreenState createState() => _UserManageScreenState();
 }
@@ -159,7 +161,7 @@ class _UserManageScreenState extends State<UserManageScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(isEdit ? 'Sửa người dùng' : 'Thêm người dùng'),
-        content: Container(
+        content: SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
             child: Column(
@@ -275,10 +277,10 @@ class _UserManageScreenState extends State<UserManageScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Hủy'),
             style: TextButton.styleFrom(
               foregroundColor: Colors.grey[600],
             ),
+            child: Text('Hủy'),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -301,7 +303,7 @@ class _UserManageScreenState extends State<UserManageScreen> {
 
                 if (isEdit) {
                   await collection?.updateOne(
-                    {'_id': user!.id},
+                    {'_id': user.id},
                     {'\$set': userData}
                   );
                   _showSnackBar('Cập nhật thành công');
@@ -317,11 +319,11 @@ class _UserManageScreenState extends State<UserManageScreen> {
                 _showSnackBar('Lỗi: $e');
               }
             },
-            child: Text(isEdit ? 'Cập nhật' : 'Thêm'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
             ),
+            child: Text(isEdit ? 'Cập nhật' : 'Thêm'),
           ),
         ],
       ),
@@ -341,11 +343,11 @@ class _UserManageScreenState extends State<UserManageScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Xác nhận'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
+            child: Text('Xác nhận'),
           ),
         ],
       ),
@@ -475,8 +477,8 @@ class _UserManageScreenState extends State<UserManageScreen> {
                             elevation: 2,
                             child: ListTile(
                               leading: CircleAvatar(
-                                child: Text(user.fullName.isNotEmpty ? user.fullName[0] : '?'),
                                 backgroundColor: Colors.blue[100],
+                                child: Text(user.fullName.isNotEmpty ? user.fullName[0] : '?'),
                               ),
                               title: Text(
                                 user.fullName,

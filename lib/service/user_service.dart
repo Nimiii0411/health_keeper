@@ -150,6 +150,25 @@ class UserService {
     }
   }
 
+  // Lấy thông tin user theo ID
+  static Future<User?> getUserById(int userId) async {
+    try {
+      var collection = _collection;
+      if (collection == null) {
+        throw Exception('Database chưa được kết nối');
+      }
+
+      var result = await collection.findOne({'id_user': userId});
+      if (result != null) {
+        return User.fromMap(result);
+      }
+      return null;
+    } catch (e) {
+      print('❌ Lỗi lấy thông tin user theo ID: $e');
+      return null;
+    }
+  }
+
   // Lấy tất cả users (cho admin hoặc debug)
   static Future<List<User>> getAllUsers() async {
     try {

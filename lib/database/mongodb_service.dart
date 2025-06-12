@@ -26,10 +26,8 @@ class DatabaseConnection {
 
     while (currentRetry < maxRetries) {
       try {
-        print('Đang kết nối MongoDB... (Lần thử ${currentRetry + 1}/$maxRetries)');
-
-        _db = await Db.create(_connectionString);
-        await _db!.open().timeout(Duration(seconds: 30));
+        print('Đang kết nối MongoDB... (Lần thử ${currentRetry + 1}/$maxRetries)');        _db = await Db.create(_connectionString);
+        await _db!.open().timeout(Duration(seconds: 10));
 
         // Test connection
         await _db!.serverStatus();

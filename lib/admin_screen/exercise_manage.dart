@@ -4,6 +4,8 @@ import '../models/exercise_model.dart';
 import '../database/mongodb_service.dart';
 
 class ExerciseManageScreen extends StatefulWidget {
+  const ExerciseManageScreen({super.key});
+
   @override
   _ExerciseManageScreenState createState() => _ExerciseManageScreenState();
 }
@@ -153,7 +155,7 @@ class _ExerciseManageScreenState extends State<ExerciseManageScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(isEdit ? 'Sửa bài tập' : 'Thêm bài tập'),
-        content: Container(
+        content: SizedBox(
           width: double.maxFinite,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -215,10 +217,10 @@ class _ExerciseManageScreenState extends State<ExerciseManageScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Hủy'),
             style: TextButton.styleFrom(
               foregroundColor: Colors.grey[600],
             ),
+            child: Text('Hủy'),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -236,7 +238,7 @@ class _ExerciseManageScreenState extends State<ExerciseManageScreen> {
 
                 if (isEdit) {
                   await collection?.updateOne(
-                    {'_id': exercise!.id},
+                    {'_id': exercise.id},
                     {'\$set': exerciseData}
                   );
                   _showSnackBar('Cập nhật thành công');
@@ -252,11 +254,11 @@ class _ExerciseManageScreenState extends State<ExerciseManageScreen> {
                 _showSnackBar('Lỗi: $e');
               }
             },
-            child: Text(isEdit ? 'Cập nhật' : 'Thêm'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
             ),
+            child: Text(isEdit ? 'Cập nhật' : 'Thêm'),
           ),
         ],
       ),
@@ -276,11 +278,11 @@ class _ExerciseManageScreenState extends State<ExerciseManageScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Xác nhận'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
+            child: Text('Xác nhận'),
           ),
         ],
       ),
@@ -410,8 +412,8 @@ class _ExerciseManageScreenState extends State<ExerciseManageScreen> {
                             elevation: 2,
                             child: ListTile(
                               leading: CircleAvatar(
-                                child: Text('💪'),
                                 backgroundColor: Colors.orange[100],
+                                child: Text('💪'),
                               ),
                               title: Text(
                                 exercise.exerciseName,

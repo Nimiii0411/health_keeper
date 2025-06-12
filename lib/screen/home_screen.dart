@@ -4,10 +4,11 @@ import 'account_screen.dart';
 import 'diary_screen.dart';
 import 'exercise_screen.dart';
 import 'reminder_screen.dart';
+import 'food_screen.dart';
 import 'login_screen.dart';
 import '../providers/theme_provider.dart';
 import '../service/user_session.dart';
-import '../widgets/enhanced_home_content.dart';
+import '../widgets/dashboard_home_content.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,19 +17,23 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {  int _selectedIndex = 0;
-    List<Widget> get _screens => [
-    EnhancedHomeContent(onNavigate: _navigateToScreen),
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
+  
+  List<Widget> get _screens => [
+    DashboardHomeContent(onNavigate: _navigateToScreen),
     AccountScreen(),
     DiaryScreen(),
+    FoodScreen(initialDate: DateTime.now()),
     ExerciseScreen(),
     ReminderScreen(userId: UserSession.currentUserId ?? 1),
   ];
 
   final List<String> _titles = [
-    'Trang Chủ',
+    'Dashboard',
     'Tài Khoản',
     'Nhật Ký',
+    'Thực Đơn',
     'Tập Luyện',
     'Nhắc Nhở',
   ];
@@ -38,21 +43,31 @@ class _HomeScreenState extends State<HomeScreen> {  int _selectedIndex = 0;
       _selectedIndex = index;
     });
   }
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_selectedIndex]),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      drawer: Drawer(
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        foregroundColor: theme.appBarTheme.foregroundColor,
+        elevation: 0,
+      ),      drawer: Drawer(
+        backgroundColor: theme.drawerTheme.backgroundColor,
         child: ListView(
           padding: EdgeInsets.zero,
-          children: [            DrawerHeader(
+          children: [
+            DrawerHeader(
               decoration: BoxDecoration(
-                color: Colors.blue,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    theme.primaryColor.withOpacity(0.8), 
+                    theme.primaryColor
+                  ],
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {  int _selectedIndex = 0;
                     child: Icon(
                       Icons.person,
                       size: 40,
-                      color: Colors.blue,
+                      color: theme.primaryColor,
                     ),
                   ),
                   SizedBox(height: 10),
@@ -86,10 +101,9 @@ class _HomeScreenState extends State<HomeScreen> {  int _selectedIndex = 0;
                   ),
                 ],
               ),
-            ),
-            ListTile(
-              leading: Icon(Icons.home),
-              title: Text('Trang Chủ'),
+            ),            ListTile(
+              leading: Icon(Icons.dashboard, color: theme.primaryColor),
+              title: Text('Dashboard'),
               selected: _selectedIndex == 0,
               onTap: () {
                 setState(() {
@@ -99,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {  int _selectedIndex = 0;
               },
             ),
             ListTile(
-              leading: Icon(Icons.account_circle),
+              leading: Icon(Icons.account_circle, color: Colors.orange),
               title: Text('Tài Khoản'),
               selected: _selectedIndex == 1,
               onTap: () {
@@ -110,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {  int _selectedIndex = 0;
               },
             ),
             ListTile(
-              leading: Icon(Icons.book),
+              leading: Icon(Icons.book, color: Colors.green),
               title: Text('Nhật Ký'),
               selected: _selectedIndex == 2,
               onTap: () {
@@ -121,8 +135,8 @@ class _HomeScreenState extends State<HomeScreen> {  int _selectedIndex = 0;
               },
             ),
             ListTile(
-              leading: Icon(Icons.fitness_center),
-              title: Text('Tập Luyện'),
+              leading: Icon(Icons.restaurant_menu, color: Colors.amber),
+              title: Text('Thực Đơn'),
               selected: _selectedIndex == 3,
               onTap: () {
                 setState(() {
@@ -132,21 +146,33 @@ class _HomeScreenState extends State<HomeScreen> {  int _selectedIndex = 0;
               },
             ),
             ListTile(
-              leading: Icon(Icons.notifications),
-              title: Text('Nhắc Nhở'),
+              leading: Icon(Icons.fitness_center, color: Colors.purple),
+              title: Text('Tập Luyện'),
               selected: _selectedIndex == 4,
               onTap: () {
                 setState(() {
                   _selectedIndex = 4;
                 });
                 Navigator.pop(context);
-              },            ),
-            Divider(),
-            Consumer<ThemeProvider>(
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.notifications, color: Colors.red),
+              title: Text('Nhắc Nhở'),
+              selected: _selectedIndex == 5,
+              onTap: () {
+                setState(() {
+                  _selectedIndex = 5;
+                });
+                Navigator.pop(context);
+              },
+            ),
+            Divider(),            Consumer<ThemeProvider>(
               builder: (context, themeProvider, child) {
                 return ListTile(
                   leading: Icon(
                     themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                    color: theme.textTheme.bodyLarge?.color,
                   ),
                   title: Text('Chế độ tối'),
                   trailing: Switch(
@@ -154,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {  int _selectedIndex = 0;
                     onChanged: (value) {
                       themeProvider.toggleTheme();
                     },
-                    activeColor: Colors.blue,
+                    activeColor: theme.primaryColor,
                   ),
                 );
               },
@@ -184,7 +210,8 @@ class _HomeScreenState extends State<HomeScreen> {  int _selectedIndex = 0;
         return AlertDialog(
           title: Text('Xác nhận đăng xuất'),
           content: Text('Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?'),
-          actions: [            TextButton(
+          actions: [
+            TextButton(
               child: Text('Hủy'),
               onPressed: () {
                 Navigator.of(context).pop();
@@ -221,129 +248,5 @@ class _HomeScreenState extends State<HomeScreen> {  int _selectedIndex = 0;
         (Route<dynamic> route) => false,
       );
     }
-  }
-}
-
-class HomeContent extends StatelessWidget {
-  final Function(int) onNavigate;
-
-  const HomeContent({super.key, required this.onNavigate});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Card(
-            elevation: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Chào mừng đến với HealthKeeper!',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Theo dõi sức khỏe của bạn mỗi ngày',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SizedBox(height: 20),
-          Text(
-            'Chức năng nhanh',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 16),
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              children: [
-                _buildQuickActionCard(
-                  icon: Icons.account_circle,
-                  title: 'Tài Khoản',
-                  color: Colors.orange,
-                  onTap: () => onNavigate(1),
-                ),
-                _buildQuickActionCard(
-                  icon: Icons.book,
-                  title: 'Nhật Ký',
-                  color: Colors.green,
-                  onTap: () => onNavigate(2),
-                ),
-                _buildQuickActionCard(
-                  icon: Icons.fitness_center,
-                  title: 'Tập Luyện',
-                  color: Colors.purple,
-                  onTap: () => onNavigate(3),
-                ),
-                _buildQuickActionCard(
-                  icon: Icons.notifications,
-                  title: 'Nhắc Nhở',
-                  color: Colors.red,
-                  onTap: () => onNavigate(4),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionCard({
-    required IconData icon,
-    required String title,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 4,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 48,
-                color: color,
-              ),
-              SizedBox(height: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

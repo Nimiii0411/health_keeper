@@ -3,7 +3,7 @@ import '../models/food_model.dart';
 import '../database/mongodb_service.dart';
 
 class FoodManageScreen extends StatefulWidget {
-  const FoodManageScreen({Key? key}) : super(key: key);
+  const FoodManageScreen({super.key});
 
   @override
   _FoodManageScreenState createState() => _FoodManageScreenState();
@@ -189,7 +189,7 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
             Text(isEdit ? 'Sửa thực phẩm' : 'Thêm thực phẩm'),
           ],
         ),
-        content: Container(
+        content: SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
             child: Column(
@@ -376,10 +376,10 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Hủy'),
             style: TextButton.styleFrom(
               foregroundColor: Colors.grey[600],
             ),
+            child: Text('Hủy'),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -427,11 +427,11 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
                 _showSnackBar('Lỗi: $e');
               }
             },
-            child: Text(isEdit ? 'Cập nhật' : 'Thêm'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
             ),
+            child: Text(isEdit ? 'Cập nhật' : 'Thêm'),
           ),
         ],
       ),
@@ -451,11 +451,11 @@ class _FoodManageScreenState extends State<FoodManageScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Xác nhận'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
+            child: Text('Xác nhận'),
           ),
         ],
       ),

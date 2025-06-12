@@ -6,6 +6,8 @@ import '../screen/login_screen.dart';
 // import 'meal_manage.dart'; // Nếu bạn muốn thêm quản lý meal daily
 
 class AdminDashboard extends StatelessWidget {
+  const AdminDashboard({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

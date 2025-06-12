@@ -5,6 +5,7 @@ import '../service/food_service.dart';
 import '../service/exercise_service.dart';
 import '../service/reminder_goal_service.dart';
 import '../models/health_diary_model.dart';
+import '../screen/food_screen.dart';
 
 class EnhancedHomeContent extends StatefulWidget {
   final Function(int) onNavigate;
@@ -316,13 +317,13 @@ class _EnhancedHomeContentState extends State<EnhancedHomeContent> {
     );
   }
 
-  Widget _buildQuickActions() {
-    return GridView.count(
+  Widget _buildQuickActions() {    return GridView.count(
       shrinkWrap: true,
       physics: NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
+      crossAxisCount: 3,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 0.9,
       children: [
         _buildQuickActionCard(
           icon: Icons.account_circle,
@@ -335,6 +336,12 @@ class _EnhancedHomeContentState extends State<EnhancedHomeContent> {
           title: 'Nhật Ký',
           color: Colors.green,
           onTap: () => widget.onNavigate(2),
+        ),
+        _buildQuickActionCard(
+          icon: Icons.restaurant_menu,
+          title: 'Thực Đơn',
+          color: Colors.teal,
+          onTap: () => _navigateToFoodScreen(),
         ),
         _buildQuickActionCard(
           icon: Icons.fitness_center,
@@ -409,5 +416,15 @@ class _EnhancedHomeContentState extends State<EnhancedHomeContent> {
     if (balance > 0) return Colors.orange;
     if (balance > -500) return Colors.green;
     return Colors.blue;
+  }
+
+  // Method để navigate đến food screen
+  void _navigateToFoodScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FoodScreen(),
+      ),
+    );
   }
 }

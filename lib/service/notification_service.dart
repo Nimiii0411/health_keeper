@@ -53,12 +53,18 @@ class NotificationService {
             break;
           case 'snooze':
             print('User chose to snooze reminder');
+            _handleSnooze(response);
             break;
         }
       }
     } catch (e) {
       print('❌ Error handling notification response: $e');
     }
+  }
+
+  static void _handleSnooze(NotificationResponse response) {
+    // Implement snooze logic here
+    print('Snoozing reminder for 10 minutes');
   }
 
   // Request permission (Android 13+)
@@ -317,24 +323,18 @@ class NotificationService {
   }
 
   // Snooze notification (nhắc lại sau 10 phút)
-  static Future<void> snoozeNotification({
-    required int id,
-    required String title,
-    required String body,
-    String? payload,
-  }) async {
+  static Future<void> snoozeNotification(int originalId, String title, String body) async {
     try {
       // Cancel original notification
-      await cancelNotification(id);
+      await cancelNotification(originalId);
       
       // Schedule new notification 10 minutes later
       final DateTime snoozeTime = DateTime.now().add(Duration(minutes: 10));
       await scheduleNotification(
-        id: id,
+        id: originalId,
         title: '🔔 $title (Nhắc lại)',
         body: body,
         scheduledDate: snoozeTime,
-        payload: payload,
       );
 
       print('✅ Notification snoozed for 10 minutes');

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screen/login_screen.dart';
 import 'screen/home_screen.dart';
+import 'screen/food_screen.dart';
 import 'providers/theme_provider.dart';
 import 'service/notification_service.dart';
 import 'database/mongodb_service.dart';
@@ -40,10 +41,10 @@ class MyApp extends StatelessWidget {
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-            home: LoginScreen(),
-            routes: {
+            home: LoginScreen(),            routes: {
               '/login': (context) => LoginScreen(),
               '/home': (context) => HomeScreen(),
+              '/food': (context) => FoodScreen(),
             },
             debugShowCheckedModeBanner: false,
           );

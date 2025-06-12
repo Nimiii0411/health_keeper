@@ -70,9 +70,7 @@ class _ReminderScreenState extends State<ReminderScreen> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDark = themeProvider.isDarkMode;
-
-    return Scaffold(
+    final isDark = themeProvider.isDarkMode;    return Scaffold(
       appBar: AppBar(
         title: Text(
           'Nhắc nhở',
@@ -83,6 +81,7 @@ class _ReminderScreenState extends State<ReminderScreen> {
         ),
         backgroundColor: isDark ? Color(0xFF2D2D44) : Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false,
         iconTheme: IconThemeData(
           color: isDark ? Colors.white : Colors.black87,
         ),
