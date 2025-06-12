@@ -5,6 +5,7 @@ import 'screen/home_screen.dart';
 import 'screen/food_screen.dart';
 import 'providers/theme_provider.dart';
 import 'service/notification_service.dart';
+import 'service/water_tracking_service.dart';
 import 'database/mongodb_service.dart';
 
 void main() async {

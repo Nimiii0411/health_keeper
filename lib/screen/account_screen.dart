@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../service/user_session.dart';
+import '../widgets/water_tracking_card.dart';
 import 'settings_screen.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';

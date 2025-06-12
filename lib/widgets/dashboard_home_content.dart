@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../service/user_session.dart';
 import '../service/health_diary_service.dart';
 import '../models/health_diary_model.dart';
+import 'water_tracking_card.dart';
 
 class DashboardHomeContent extends StatefulWidget {
   final Function(int) onNavigate;
@@ -132,11 +133,12 @@ class _DashboardHomeContentState extends State<DashboardHomeContent> {
       onRefresh: _loadHealthData,
       child: SingleChildScrollView(
         physics: AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.all(16),
-        child: Column(
+        padding: EdgeInsets.all(16),        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildWelcomeCard(),
+            SizedBox(height: 20),
+            WaterTrackingCard(),
             SizedBox(height: 20),
             _buildLatestHealthInfo(),
             SizedBox(height: 20),
