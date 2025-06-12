@@ -19,12 +19,11 @@ class _AccountScreenState extends State<AccountScreen> {
       // Trigger rebuild to get updated user data
     });
   }
-
   @override
   Widget build(BuildContext context) {
     final currentUser = UserSession.currentUser;
     
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,11 +229,13 @@ class _AccountScreenState extends State<AccountScreen> {
                   onTap: () {
                     // Navigate to help
                   },
-                ),
-              ],
+                ),              ],
             ),
           ),
-        ],      ),
+          // Add bottom padding for better scroll experience
+          SizedBox(height: 16),
+        ],
+      ),
     );
   }
 

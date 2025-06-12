@@ -8,8 +8,9 @@ import 'custom_meal_plan_screen.dart';
 
 class FoodScreen extends StatefulWidget {
   final DateTime? initialDate;
+  final bool showBackButton;
   
-  const FoodScreen({super.key, this.initialDate});
+  const FoodScreen({super.key, this.initialDate, this.showBackButton = false});
 
   @override
   _FoodScreenState createState() => _FoodScreenState();
@@ -129,10 +130,9 @@ class _FoodScreenState extends State<FoodScreen> with TickerProviderStateMixin {
             color: theme.appBarTheme.foregroundColor,
             fontWeight: FontWeight.bold,
           ),
-        ),
-        backgroundColor: theme.appBarTheme.backgroundColor,
+        ),        backgroundColor: theme.appBarTheme.backgroundColor,
         elevation: 0,
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: widget.showBackButton,
         iconTheme: theme.appBarTheme.iconTheme,
         actions: [
           IconButton(
@@ -270,8 +270,7 @@ class _FoodScreenState extends State<FoodScreen> with TickerProviderStateMixin {
             style: TextStyle(color: theme.textTheme.bodyMedium?.color),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
-          Row(
+          const SizedBox(height: 24),          Row(
             children: [
               Expanded(
                 child: ElevatedButton.icon(
@@ -294,19 +293,6 @@ class _FoodScreenState extends State<FoodScreen> with TickerProviderStateMixin {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: theme.primaryColor,
                     side: BorderSide(color: theme.primaryColor),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: todayMeal != null ? () => _showDeleteMealDialog() : null,
-                  icon: const Icon(Icons.delete),
-                  label: const Text('Xóa thực đơn'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: todayMeal != null ? Colors.red[600] : theme.disabledColor,
-                    side: BorderSide(color: todayMeal != null ? Colors.red[600]! : theme.disabledColor),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
@@ -536,61 +522,118 @@ class _FoodScreenState extends State<FoodScreen> with TickerProviderStateMixin {
   }  Widget _buildMealItem(MealItem meal) {
     final theme = Theme.of(context);
     
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: theme.dividerColor),
+    return Dismissible(
+      key: Key('meal_${meal.foodName}_${meal.mealType}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: Colors.red[600],
+          border: Border(
+            top: BorderSide(color: theme.dividerColor),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.delete, color: Colors.white),
+            const SizedBox(width: 8),
+            const Text(
+              'Xóa',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.restaurant, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5)), // Simplified since no image field
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Xóa món ăn'),
+            content: Text('Bạn có muốn xóa "${meal.foodName}" khỏi thực đơn?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Hủy'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red[600],
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Xóa'),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  meal.foodName,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 16,
-                    color: theme.textTheme.titleMedium?.color,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${meal.quantity.toStringAsFixed(1)} ${meal.unit}',
-                  style: TextStyle(
-                    color: theme.textTheme.bodyMedium?.color,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${meal.totalCalories.toStringAsFixed(0)} kcal',
-                  style: TextStyle(
-                    color: Colors.orange[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
+        ) ?? false;
+      },
+      onDismissed: (direction) {
+        _removeMealItem(meal);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: theme.dividerColor),
           ),
-        ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.restaurant, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5)), // Simplified since no image field
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    meal.foodName,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 16,
+                      color: theme.textTheme.titleMedium?.color,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${meal.quantity.toStringAsFixed(1)} ${meal.unit}',
+                    style: TextStyle(
+                      color: theme.textTheme.bodyMedium?.color,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${meal.totalCalories.toStringAsFixed(0)} kcal',
+                    style: TextStyle(
+                      color: Colors.orange[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.more_vert, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7)),
+              onPressed: () => _showMealItemOptions(meal),
+            ),
+          ],
+        ),
       ),
     );
-  }
-  Widget _buildMealActions() {
+  }Widget _buildMealActions() {
     final theme = Theme.of(context);
     
     return Row(
@@ -616,6 +659,19 @@ class _FoodScreenState extends State<FoodScreen> with TickerProviderStateMixin {
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.primaryColor,
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => _showDeleteMealDialog(),
+            icon: const Icon(Icons.delete),
+            label: const Text('Xóa'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red[600],
+              side: BorderSide(color: Colors.red[600]!),
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
           ),
@@ -853,17 +909,45 @@ class _FoodScreenState extends State<FoodScreen> with TickerProviderStateMixin {
       }
     });
   }
-
   void _showDeleteMealDialog() {
     if (todayMeal == null) return;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xác nhận xóa'),
-        content: const Text(
-          'Bạn có chắc chắn muốn xóa thực đơn này?\n'
-          'Hành động này không thể hoàn tác.',
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red[600]),
+            const SizedBox(width: 8),
+            const Text('Xác nhận xóa'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Bạn có chắc chắn muốn xóa thực đơn này?',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Ngày: ${DateFormat('dd/MM/yyyy').format(selectedDate)}',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            Text(
+              'Tổng calories: ${todayMeal!.totalCalories.toStringAsFixed(0)} kcal',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Hành động này không thể hoàn tác.',
+              style: TextStyle(
+                color: Colors.red,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -876,6 +960,263 @@ class _FoodScreenState extends State<FoodScreen> with TickerProviderStateMixin {
               backgroundColor: Colors.red[600],
               foregroundColor: Colors.white,
             ),
+            child: const Text('Xóa thực đơn'),
+          ),
+        ],
+      ),
+    );
+  }
+  Future<void> _deleteMealPlan() async {
+    if (todayMeal?.id == null) return;
+
+    Navigator.pop(context); // Close dialog
+
+    // Show loading
+    setState(() => isLoading = true);
+
+    try {
+      final success = await MealPlanService.deleteMealPlan(todayMeal!.id!);
+      
+      if (success) {
+        setState(() {
+          todayMeal = null;
+          isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                const Text('Đã xóa thực đơn thành công!'),
+              ],
+            ),
+            backgroundColor: Colors.green[600],
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        throw Exception('Failed to delete meal plan');
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Lỗi xóa thực đơn: $e')),
+            ],
+          ),
+          backgroundColor: Colors.red[600],
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Thử lại',
+            textColor: Colors.white,
+            onPressed: () => _showDeleteMealDialog(),
+          ),
+        ),
+      );
+    }
+  }  void _addFoodToMeal(Food food) {
+    // TODO: Implement add food to meal functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Thêm ${food.foodName} vào thực đơn (đang phát triển)')),
+    );
+  }
+  // Method to remove a meal item from the meal plan
+  Future<void> _removeMealItem(MealItem meal) async {
+    if (todayMeal?.id == null) return;
+
+    try {
+      // Create updated meal lists by removing the meal item
+      List<MealItem> updatedBreakfast = List.from(todayMeal!.breakfast);
+      List<MealItem> updatedLunch = List.from(todayMeal!.lunch);
+      List<MealItem> updatedDinner = List.from(todayMeal!.dinner);
+      
+      bool removed = false;
+      
+      if (updatedBreakfast.contains(meal)) {
+        updatedBreakfast.remove(meal);
+        removed = true;
+      } else if (updatedLunch.contains(meal)) {
+        updatedLunch.remove(meal);
+        removed = true;
+      } else if (updatedDinner.contains(meal)) {
+        updatedDinner.remove(meal);
+        removed = true;
+      }
+
+      if (removed) {
+        // Create updated meal plan with recalculated totals
+        final updatedMeal = todayMeal!.copyWith(
+          breakfast: updatedBreakfast,
+          lunch: updatedLunch,
+          dinner: updatedDinner,
+          updatedAt: DateTime.now(),
+        );
+        
+        // Recalculate totals
+        final mealWithTotals = DailyMeal.calculateTotals(updatedMeal);
+        
+        // Update the meal plan in the database
+        final success = await MealPlanService.saveDailyMeal(mealWithTotals);
+        
+        if (success != null) {
+          setState(() {
+            todayMeal = mealWithTotals;
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Đã xóa "${meal.foodName}" khỏi thực đơn'),
+              action: SnackBarAction(
+                label: 'Hoàn tác',
+                onPressed: () => _undoRemoveMealItem(meal),
+              ),
+            ),
+          );
+        } else {
+          throw Exception('Failed to update meal plan');
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi xóa món ăn: $e'),
+          backgroundColor: Colors.red[600],
+        ),
+      );
+    }
+  }
+
+  // Method to show options for a meal item
+  void _showMealItemOptions(MealItem meal) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                meal.foodName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${meal.quantity.toStringAsFixed(1)} ${meal.unit} • ${meal.totalCalories.toStringAsFixed(0)} kcal',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Icon(Icons.edit, color: Colors.blue[600]),
+                title: const Text('Chỉnh sửa lượng'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showEditQuantityDialog(meal);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.delete, color: Colors.red[600]),
+                title: const Text('Xóa khỏi thực đơn'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showConfirmRemoveMealDialog(meal);
+                },
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  // Helper methods for meal item management
+  void _addMealItemBack(MealItem meal) {
+    // Add the meal item back to its original meal type
+    List<MealItem> updatedBreakfast = List.from(todayMeal!.breakfast);
+    List<MealItem> updatedLunch = List.from(todayMeal!.lunch);
+    List<MealItem> updatedDinner = List.from(todayMeal!.dinner);
+    
+    switch (meal.mealType.toLowerCase()) {
+      case 'breakfast':
+      case 'sáng':
+        updatedBreakfast.add(meal);
+        break;
+      case 'lunch':
+      case 'trưa':
+        updatedLunch.add(meal);
+        break;
+      case 'dinner':
+      case 'tối':
+        updatedDinner.add(meal);
+        break;
+    }
+    
+    final updatedMeal = todayMeal!.copyWith(
+      breakfast: updatedBreakfast,
+      lunch: updatedLunch,
+      dinner: updatedDinner,
+      updatedAt: DateTime.now(),
+    );
+    
+    final mealWithTotals = DailyMeal.calculateTotals(updatedMeal);
+    setState(() {
+      todayMeal = mealWithTotals;
+    });
+  }
+
+  void _undoRemoveMealItem(MealItem meal) {
+    _addMealItemBack(meal);
+    MealPlanService.saveDailyMeal(todayMeal!);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Đã hoàn tác xóa món ăn')),
+    );
+  }
+
+  void _showConfirmRemoveMealDialog(MealItem meal) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xóa món ăn'),
+        content: Text('Bạn có chắc chắn muốn xóa "${meal.foodName}" khỏi thực đơn?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _removeMealItem(meal);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[600],
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Xóa'),
           ),
         ],
@@ -883,32 +1224,127 @@ class _FoodScreenState extends State<FoodScreen> with TickerProviderStateMixin {
     );
   }
 
-  Future<void> _deleteMealPlan() async {
+  void _showEditQuantityDialog(MealItem meal) {
+    final quantityController = TextEditingController(text: meal.quantity.toString());
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Chỉnh sửa ${meal.foodName}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: quantityController,
+              decoration: InputDecoration(
+                labelText: 'Lượng (${meal.unit})',
+                border: const OutlineInputBorder(),
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Hiện tại: ${meal.quantity.toStringAsFixed(1)} ${meal.unit} = ${meal.totalCalories.toStringAsFixed(0)} kcal',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newQuantity = double.tryParse(quantityController.text);
+              if (newQuantity != null && newQuantity > 0) {
+                _updateMealItemQuantity(meal, newQuantity);
+                Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Vui lòng nhập số lượng hợp lệ')),
+                );
+              }
+            },
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _updateMealItemQuantity(MealItem meal, double newQuantity) async {
     if (todayMeal?.id == null) return;
 
-    Navigator.pop(context); // Close dialog
-
     try {
-      final success = await MealPlanService.deleteMealPlan(todayMeal!.id!);
+      // Calculate calories per unit from the original meal item
+      final caloriesPerUnit = meal.totalCalories / meal.quantity;
+      final proteinPerUnit = meal.totalProtein / meal.quantity;
+      final fatPerUnit = meal.totalFat / meal.quantity;
+      final fiberPerUnit = meal.totalFiber / meal.quantity;
+      final carbsPerUnit = meal.totalCarbs / meal.quantity;
       
-      if (success) {
-        setState(() => todayMeal = null);
+      // Create updated meal item with new quantity
+      final updatedMealItem = meal.copyWith(
+        quantity: newQuantity,
+        totalCalories: caloriesPerUnit * newQuantity,
+        totalProtein: proteinPerUnit * newQuantity,
+        totalFat: fatPerUnit * newQuantity,
+        totalFiber: fiberPerUnit * newQuantity,
+        totalCarbs: carbsPerUnit * newQuantity,
+      );
+      
+      // Update the appropriate meal list
+      List<MealItem> updatedBreakfast = List.from(todayMeal!.breakfast);
+      List<MealItem> updatedLunch = List.from(todayMeal!.lunch);
+      List<MealItem> updatedDinner = List.from(todayMeal!.dinner);
+      
+      if (todayMeal!.breakfast.contains(meal)) {
+        final index = updatedBreakfast.indexOf(meal);
+        updatedBreakfast[index] = updatedMealItem;
+      } else if (todayMeal!.lunch.contains(meal)) {
+        final index = updatedLunch.indexOf(meal);
+        updatedLunch[index] = updatedMealItem;
+      } else if (todayMeal!.dinner.contains(meal)) {
+        final index = updatedDinner.indexOf(meal);
+        updatedDinner[index] = updatedMealItem;
+      }
+      
+      // Create updated meal plan
+      final updatedMeal = todayMeal!.copyWith(
+        breakfast: updatedBreakfast,
+        lunch: updatedLunch,
+        dinner: updatedDinner,
+        updatedAt: DateTime.now(),
+      );
+      
+      // Recalculate totals
+      final mealWithTotals = DailyMeal.calculateTotals(updatedMeal);
+      
+      // Update in database
+      final success = await MealPlanService.saveDailyMeal(mealWithTotals);
+      
+      if (success != null) {
+        setState(() {
+          todayMeal = mealWithTotals;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã xóa thực đơn thành công!')),
+          SnackBar(content: Text('Đã cập nhật lượng ${meal.foodName}')),
         );
       } else {
-        throw Exception('Failed to delete meal plan');
+        throw Exception('Failed to update meal plan');
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi xóa thực đơn: $e')),
+        SnackBar(
+          content: Text('Lỗi cập nhật: $e'),
+          backgroundColor: Colors.red[600],
+        ),
       );
     }
-  }void _addFoodToMeal(Food food) {
-    // TODO: Implement add food to meal functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Thêm ${food.foodName} vào thực đơn (đang phát triển)')),
-    );
   }
   void _showDialog(String title, String message) {
     showDialog(

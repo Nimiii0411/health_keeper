@@ -960,41 +960,54 @@ class _DiaryScreenState extends State<DiaryScreen> {
       print('❌ Lỗi khi lấy meal plan: $e');
       return null;
     }
-  }
-  // Method để xem chi tiết meal plan
+  }  // Method để xem chi tiết meal plan
   void _viewMealPlanDetails(DailyMeal mealPlan) {
     // Parse the meal plan date to DateTime
     DateTime mealDate = _parseDate(mealPlan.date);
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => FoodScreen(initialDate: mealDate),
+        builder: (context) => FoodScreen(
+          initialDate: mealDate,
+          showBackButton: true,
+        ),
       ),
-    );
-  }
-
-  // Method để chỉnh sửa meal plan
+    ).then((result) {
+      // Refresh data when returning from meal editing screens
+      _loadHealthDiary();
+    });
+  }  // Method để chỉnh sửa meal plan
   void _editMealPlan(DailyMeal mealPlan) {
     // Parse the meal plan date to DateTime
     DateTime mealDate = _parseDate(mealPlan.date);
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => FoodScreen(initialDate: mealDate),
+        builder: (context) => FoodScreen(
+          initialDate: mealDate,
+          showBackButton: true,
+        ),
       ),
-    );
-  }
-
-  // Method để tạo meal plan cho ngày cụ thể
+    ).then((result) {
+      // Refresh data when returning from meal editing screens
+      _loadHealthDiary();
+    });
+  }  // Method để tạo meal plan cho ngày cụ thể
   void _createMealPlanForDate(String date) {
     // Parse the date string to DateTime
     DateTime targetDate = _parseDate(date);
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => FoodScreen(initialDate: targetDate),
+        builder: (context) => FoodScreen(
+          initialDate: targetDate,
+          showBackButton: true,
+        ),
       ),
-    );
+    ).then((result) {
+      // Refresh data when returning from meal creation screens
+      _loadHealthDiary();
+    });
   }
 
   // Helper methods cho BMI
