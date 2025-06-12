@@ -124,41 +124,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                 ],
               ],
-            ),
-          ),
-          SizedBox(height: 24),
-          
-          // Quick Stats (you can expand this later with real data)
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  icon: Icons.favorite,
-                  title: 'Sức khỏe',
-                  value: 'Tốt',
-                  color: Colors.red,
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  icon: Icons.fitness_center,
-                  title: 'Hoạt động',
-                  value: 'Hôm nay',
-                  color: Colors.green,
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  icon: Icons.star,
-                  title: 'Mục tiêu',
-                  value: '80%',
-                  color: Colors.orange,
-                ),
-              ),
-            ],
-          ),
+            ),          ),
           SizedBox(height: 24),
 
           // Account Settings
@@ -233,54 +199,7 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
           ),
           // Add bottom padding for better scroll experience
-          SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: color,
-            size: 24,
-          ),
-          SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+          SizedBox(height: 16),        ],
       ),
     );
   }
